@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <title>麻雀点数計算機</title>
+    <style>
+      :root {
+        --bg-color: #1a1a1a;
+        --card-bg: #2d2d2d;
+        --text-color: #ffffff;
+        --accent-color: #4caf50;
+        --secondary-color: #81c784;
+        --error-color: #f44336;
+        --modal-bg: rgba(0, 0, 0, 0.85);
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 480px;
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      }
+
+      h1 {
+        text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--accent-color);
+      }
+
+      .control-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+        color: #ccc;
+      }
+
+      select, button {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #444;
+        background-color: #3d3d3d;
+        color: white;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      button.primary {
+        background-color: var(--accent-color);
+        border: none;
+        font-weight: bold;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      button.primary:hover {
+        background-color: var(--secondary-color);
+      }
+
+      button.secondary {
+        background-color: #555;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+      }
+      
+      button.secondary:hover {
+        background-color: #666;
+      }
+
+      .result-area {
+        margin-top: 2rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background-color: rgba(76, 175, 80, 0.1);
+        text-align: center;
+        border: 1px solid var(--accent-color);
+      }
+
+      .result-score {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+      }
+      
+      .toggle-group {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 1rem;
+      }
+      
+      .toggle-btn {
+          flex: 1;
+          background: #444;
+          border: 1px solid #555;
+          opacity: 0.7;
+          cursor: pointer;
+          transition: all 0.2s;
+      }
+      
+      .toggle-btn.active {
+          background: var(--accent-color);
+          opacity: 1;
+          border-color: var(--accent-color);
+          font-weight: bold;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--modal-bg);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .modal-overlay.open {
+        display: flex;
+      }
+
+      .modal-content {
+        background-color: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--accent-color);
+      }
+      
+      .fu-calc-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+          border-bottom: 1px solid #444;
+          padding-bottom: 10px;
+      }
+      
+      .fu-calc-row label {
+          margin-bottom: 0;
+          flex: 1;
+      }
+      
+      .fu-calc-row select, .fu-calc-row input {
+          width: auto;
+          margin-bottom: 0;
+          flex: 1;
+      }
+      
+      .calc-result-preview {
+          text-align: center;
+          font-size: 1.2rem;
+          font-weight: bold;
+          margin: 15px 0;
+          padding: 10px;
+          background: #333;
+          border-radius: 8px;
+      }
+
+      .helper-btn {
+          margin-top: 5px;
+          background-color: #2196f3;
+          border: none;
+      }
+      .helper-btn:hover {
+          background-color: #42a5f5;
+      }
+
+      /* Honba Control Styles */
+      .honba-control {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #3d3d3d;
+          border: 1px solid #444;
+          border-radius: 8px;
+          padding: 5px;
+      }
+      
+      .honba-btn {
+          width: 50px;
+          margin-bottom: 0;
+          font-weight: bold;
+          font-size: 1.2rem;
+          background: #555;
+      }
+      
+      .honba-display {
+          flex: 1;
+          text-align: center;
+          font-weight: bold;
+          font-size: 1.1rem;
+      }
+
+      /* Fu Calc Button Styles */
+      .fu-section-title {
+          font-weight: bold;
+          color: #ccc;
+          margin-bottom: 8px;
+          font-size: 0.9rem;
+      }
+
+      .fu-btn-grid {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+      }
+      
+      .fu-btn-grid.col-3 .fu-btn {
+          width: 33%;
+      }
+
+      .fu-btn {
+          flex: 1;
+          background-color: #444;
+          border: 1px solid #555;
+          border-radius: 6px;
+          padding: 10px 5px;
+          color: #fff;
+          cursor: pointer;
+          opacity: 0.7;
+          font-size: 0.9rem;
+          line-height: 1.2;
+      }
+      
+      .fu-btn.active {
+          background-color: var(--accent-color);
+          border-color: var(--accent-color);
+          opacity: 1;
+          font-weight: bold;
+      }
+      
+      .fu-btn small {
+          font-size: 0.75rem;
+          opacity: 0.8;
+          font-weight: normal;
+      }
+
+      .fu-mentsu-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          margin-bottom: 16px;
+      }
+      
+      .fu-mentsu-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+      }
+
+      .fu-mentsu-item .label {
+          font-size: 0.7rem;
+          color: #aaa;
+          margin-bottom: 4px;
+          text-align: center;
+          line-height: 1.1;
+      }
+
+      .mentsu-btn {
+          width: 100%;
+          aspect-ratio: 1;
+          background-color: #333;
+          border: 1px solid #555;
+          border-radius: 8px;
+          color: #fff;
+          font-size: 1.2rem;
+          font-weight: bold;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+      }
+      
+      .mentsu-btn[data-count="1"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
+      .mentsu-btn[data-count="2"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
+      .mentsu-btn[data-count="3"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
+      .mentsu-btn[data-count="4"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
+
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🀄 点数計算機</h1>
+      
+      <div id="app">
+        <div class="control-group">
+            <label>親 / 子</label>
+            <div class="toggle-group">
+                <button type="button" class="toggle-btn" id="btn-wind-east" onclick="setWind('east')">親 (東)</button>
+                <button type="button" class="toggle-btn active" id="btn-wind-south" onclick="setWind('south')">子 (南)</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>アガリ方</label>
+            <div class="toggle-group">
+                <button type="button" class="toggle-btn active" id="btn-win-ron" onclick="setWinType('ron')">ロン</button>
+                <button type="button" class="toggle-btn" id="btn-win-tsumo" onclick="setWinType('tsumo')">ツモ</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>翻数 (ハン)</label>
+            <select id="han-select" onchange="calculateScore()">
+                <option value="1">1翻</option>
+                <option value="2">2翻</option>
+                <option value="3">3翻</option>
+                <option value="4">4翻</option>
+                <option value="5">5翻 (満貫)</option>
+                <option value="6">6-7翻 (跳満)</option>
+                <option value="8">8-10翻 (倍満)</option>
+                <option value="11">11-12翻 (三倍満)</option>
+                <option value="13">13翻+ (役満)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>符数 (フ)</label>
+            <select id="fu-select" onchange="calculateScore()">
+                <option value="20">20符 (ピンフツモ)</option>
+                <option value="25">25符 (チートイ)</option>
+                <option value="30" selected>30符</option>
+                <option value="40">40符</option>
+                <option value="50">50符</option>
+                <option value="60">60符</option>
+                <option value="70">70符</option>
+                <option value="80">80符</option>
+                <option value="90">90符</option>
+                <option value="100">100符</option>
+                <option value="110">110符</option>
+            </select>
+            <button type="button" class="helper-btn" onclick="openFuModal()">符数計算アシスト</button>
+        </div>
+
+        <div class="control-group">
+            <label>本場 (積み棒)</label>
+            <div class="honba-control">
+                <button type="button" class="honba-btn" onclick="updateHonba(-1)">－</button>
+                <div class="honba-display" id="honba-display">0本場</div>
+                <button type="button" class="honba-btn" onclick="updateHonba(1)">＋</button>
+            </div>
+        </div>
+
+        <div class="result-area" id="result-area">
+            <div>点数</div>
+            <div class="result-score" id="score-display">---</div>
+            <div id="score-detail">---</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fu Calculation Modal -->
+    <div class="modal-overlay" id="fu-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>符数計算</h2>
+                <button type="button" onclick="closeFuModal()" style="width: auto; background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <!-- Fu Calculation Content (Button Style) -->
+            
+            <div class="fu-section-title">基本条件</div>
+            <div class="fu-btn-grid">
+                <button type="button" class="fu-btn active" id="btn-menzen" onclick="toggleMenzen()">門前</button>
+                <button type="button" class="fu-btn" id="btn-naki" onclick="toggleMenzen()">鳴き</button>
+            </div>
+            
+            <div class="fu-section-title">雀頭 (アタマ)</div>
+            <div class="fu-btn-grid col-3">
+                <button type="button" class="fu-btn active" id="btn-head-0" onclick="setHead(0)">数牌<br><small>0符</small></button>
+                <button type="button" class="fu-btn" id="btn-head-2" onclick="setHead(2)">役牌<br><small>2符</small></button>
+                <button type="button" class="fu-btn" id="btn-head-4" onclick="setHead(4)">連風<br><small>4符</small></button>
+            </div>
+
+            <div class="fu-section-title">待ち</div>
+            <div class="fu-btn-grid">
+                <button type="button" class="fu-btn active" id="btn-wait-0" onclick="setWait(0)">両面・シャボ<br><small>0符</small></button>
+                <button type="button" class="fu-btn" id="btn-wait-2" onclick="setWait(2)">カン・ペン・単騎<br><small>2符</small></button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+            <div class="fu-section-title">面子 (タップで個数追加)</div>
+            
+            <div class="fu-mentsu-grid">
+                <div class="fu-mentsu-item">
+                    <div class="label">2〜8<br>ポン (2)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kotsu-mo" onclick="addMentsu('kotsu-mo')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">2〜8<br>暗刻 (4)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kotsu-mc" onclick="addMentsu('kotsu-mc')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">1･9･字<br>ポン (4)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kotsu-yo" onclick="addMentsu('kotsu-yo')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">1･9･字<br>暗刻 (8)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kotsu-yc" onclick="addMentsu('kotsu-yc')">0</button>
+                </div>
+                
+                <!-- Kantsu -->
+                <div class="fu-mentsu-item">
+                    <div class="label">2〜8<br>明カン (8)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kan-mo" onclick="addMentsu('kan-mo')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">2〜8<br>暗カン (16)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kan-mc" onclick="addMentsu('kan-mc')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">1･9･字<br>明カン (16)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kan-yo" onclick="addMentsu('kan-yo')">0</button>
+                </div>
+                <div class="fu-mentsu-item">
+                    <div class="label">1･9･字<br>暗カン (32)</div>
+                    <button type="button" class="mentsu-btn" id="btn-kan-yc" onclick="addMentsu('kan-yc')">0</button>
+                </div>
+            </div>
+
+            <div class="calc-result-preview" id="calc-preview">
+                合計: 30符 (算出: 22)
+            </div>
+
+            <button type="button" class="primary" onclick="applyFuResult()">符数を反映して閉じる</button>
+        </div>
+    </div>
+
+    <script>
+      // State
+      let state = {
+          isDealer: false, // false = 子, true = 親
+          isTsumo: false,  // false = ロン, true = ツモ
+          han: 1,
+          fu: 30,
+          honba: 0
+      };
+
+      // Fu Calc State
+      let fuState = {
+          menzen: true,
+          head: 0,
+          wait: 0,
+          mentsu: {
+              'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
+              'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
+          }
+      };
+
+      function updateHonba(delta) {
+          let newVal = state.honba + delta;
+          if (newVal < 0) newVal = 0;
+          state.honba = newVal;
+          document.getElementById('honba-display').innerText = `${state.honba}本場`;
+          calculateScore();
+      }
+
+      // Modal Functions
+      function openFuModal() {
+          document.getElementById('fu-modal').classList.add('open');
+          updateFuUI();
+      }
+
+      function closeFuModal() {
+          document.getElementById('fu-modal').classList.remove('open');
+      }
+
+      function toggleMenzen() {
+          fuState.menzen = !fuState.menzen;
+          updateFuUI();
+      }
+
+      function setHead(val) {
+          fuState.head = val;
+          updateFuUI();
+      }
+
+      function setWait(val) {
+          fuState.wait = val;
+          updateFuUI();
+      }
+
+      function addMentsu(key) {
+          fuState.mentsu[key] = (fuState.mentsu[key] + 1) % 5; // Cycle 0-4
+          updateFuUI();
+      }
+
+      function updateFuUI() {
+          // Update Buttons
+          document.getElementById('btn-menzen').className = fuState.menzen ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-naki').className = !fuState.menzen ? 'fu-btn active' : 'fu-btn';
+
+          document.getElementById('btn-head-0').className = fuState.head === 0 ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-head-2').className = fuState.head === 2 ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-head-4').className = fuState.head === 4 ? 'fu-btn active' : 'fu-btn';
+
+          document.getElementById('btn-wait-0').className = fuState.wait === 0 ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-wait-2').className = fuState.wait === 2 ? 'fu-btn active' : 'fu-btn';
+
+          for (const key in fuState.mentsu) {
+              const btn = document.getElementById(`btn-${key}`);
+              if (btn) {
+                  btn.innerText = fuState.mentsu[key];
+                  btn.setAttribute('data-count', fuState.mentsu[key]);
+              }
+          }
+
+          calcFuAssist();
+      }
+
+      function calcFuAssist() {
+          let total = 20; // 副底
+
+          // 門前加符 / ツモ符
+          if (state.isTsumo) {
+              total += 2; // ツモ
+          } else {
+              if (fuState.menzen) {
+                  total += 10; // メンゼンロン
+              }
+          }
+
+          // 雀頭 & 待ち
+          total += fuState.head;
+          total += fuState.wait;
+
+          // 面子 (刻子・槓子)
+          const m = fuState.mentsu;
+          total += m['kotsu-mo'] * 2;
+          total += m['kotsu-mc'] * 4;
+          total += m['kotsu-yo'] * 4;
+          total += m['kotsu-yc'] * 8;
+          
+          total += m['kan-mo'] * 8;
+          total += m['kan-mc'] * 16;
+          total += m['kan-yo'] * 16;
+          total += m['kan-yc'] * 32;
+
+          // 切り上げ
+          let rounded = Math.ceil(total / 10) * 10;
+          
+          // ピンフツモ例外 (20符)
+          // 条件: 22符 (副底20 + ツモ2) のみ
+          if (total === 22 && state.isTsumo) {
+               rounded = 20; 
+               document.getElementById('calc-preview').innerHTML = `合計: 20符 (ピンフツモ)<br><span style="font-size:0.8em; font-weight:normal">算出: ${total} → 特例20</span>`;
+               document.getElementById('calc-preview').dataset.result = 20;
+          } else {
+               // 鳴きピンフ形 (20符) -> 30符
+              if (rounded === 20 && !state.isTsumo) {
+                  if (total > 20) rounded = 30;
+              }
+               document.getElementById('calc-preview').innerHTML = `合計: ${rounded}符 <span style="font-size:0.8em; font-weight:normal">(算出: ${total})</span>`;
+               document.getElementById('calc-preview').dataset.result = rounded;
+          }
+      }
+
+      function applyFuResult() {
+          const result = parseInt(document.getElementById('calc-preview').dataset.result);
+          
+          // Select the closest option in the dropdown
+          const select = document.getElementById('fu-select');
+          
+          // Find option
+          let found = false;
+          for (let i = 0; i < select.options.length; i++) {
+              if (parseInt(select.options[i].value) === result) {
+                  select.selectedIndex = i;
+                  found = true;
+                  break;
+              }
+          }
+          
+          if (!found) {
+              // If not found (e.g. > 110 or weird number), select nearest or max
+              if (result > 110) select.value = "110";
+              else if (result < 20) select.value = "20";
+              else {
+                  // Fallback to 30 or whatever
+                  select.value = "30"; 
+              }
+          }
+          
+          calculateScore();
+          closeFuModal();
+      }
+
+      function setWind(wind) {
+          state.isDealer = (wind === 'east');
+          updateToggleUI();
+          calculateScore();
+      }
+
+      function setWinType(type) {
+          state.isTsumo = (type === 'tsumo');
+          // Sync removed: disabled select in modal is no longer there
+          
+          updateToggleUI();
+          calculateScore();
+      }
+
+      function updateToggleUI() {
+          document.getElementById('btn-wind-east').className = state.isDealer ? 'toggle-btn active' : 'toggle-btn';
+          document.getElementById('btn-wind-south').className = !state.isDealer ? 'toggle-btn active' : 'toggle-btn';
+          
+          document.getElementById('btn-win-tsumo').className = state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
+          document.getElementById('btn-win-ron').className = !state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
+      }
+
+      function calculateScore() {
+        const han = parseInt(document.getElementById("han-select").value);
+        const fu = parseInt(document.getElementById("fu-select").value);
+
+        state.han = han;
+        state.fu = fu;
+
+        let basePoints = 0;
+        let scoreText = "";
+        let paymentText = "";
+        let yakushoku = "";
+
+        // 1. 基礎点の算出
+        if (han >= 5) {
+          if (han >= 13) basePoints = 8000;       // 役満
+          else if (han >= 11) basePoints = 6000;  // 三倍満
+          else if (han >= 8) basePoints = 4000;   // 倍満
+          else if (han >= 6) basePoints = 3000;   // 跳満
+          else basePoints = 2000;                 // 満貫
+        } else {
+          // 符計算: 符 * 2^(2+翻)
+          basePoints = fu * Math.pow(2, 2 + han);
+
+          // 満貫切り上げチェック
+          if (basePoints > 2000) {
+            basePoints = 2000;
+          }
+        }
+
+        // 役職名の決定 (満貫以上の場合)
+        if (basePoints === 8000) yakushoku = "役満";
+        else if (basePoints === 6000) yakushoku = "三倍満";
+        else if (basePoints === 4000) yakushoku = "倍満";
+        else if (basePoints === 3000) yakushoku = "跳満";
+        else if (basePoints === 2000) yakushoku = "満貫";
+
+        // 2. 支払い額の計算 (100点単位切り上げ) + 本場加算
+        const ceil100 = (num) => Math.ceil(num / 100) * 100;
+        const honbaPoints = state.honba * 300; // Total added to score in Ron
+        const honbaPay = state.honba * 100;    // Added to each payment in Tsumo
+
+        let totalScore = 0;
+
+        if (state.isDealer) { // 親の場合
+          if (state.isTsumo) {
+            // 親のツモ: オール (基礎点 * 2) + 本場(100点)
+            const payment = ceil100(basePoints * 2);
+            const finalPayment = payment + honbaPay;
+            totalScore = finalPayment * 3;
+            scoreText = `${totalScore}点`;
+            paymentText = `${finalPayment}点オール`;
+          } else {
+            // 親のロン: (基礎点 * 6) + 本場(300点)
+            totalScore = ceil100(basePoints * 6) + honbaPoints;
+            scoreText = `${totalScore}点`;
+            paymentText = "ロン";
+          }
+        } else { // 子の場合
+          if (state.isTsumo) {
+            // 子のツモ: 親(基礎点 * 2), 子(基礎点 * 1) + 本場(100点ずつ)
+            const dealerPay = ceil100(basePoints * 2) + honbaPay;
+            const childPay = ceil100(basePoints) + honbaPay;
+            totalScore = dealerPay + (childPay * 2);
+            scoreText = `${totalScore}点`;
+            paymentText = `親: ${dealerPay}点 / 子: ${childPay}点`;
+          } else {
+            // 子のロン: (基礎点 * 4) + 本場(300点)
+            totalScore = ceil100(basePoints * 4) + honbaPoints;
+            scoreText = `${totalScore}点`;
+            paymentText = "ロン";
+          }
+        }
+
+         // UI更新
+        const yakushokuDisplay = yakushoku ? `(${yakushoku})` : "";
+        document.getElementById("score-display").innerHTML = `
+          ${scoreText} <span style="font-size: 1rem; font-weight: normal;">${yakushokuDisplay}</span>
+        `;
+        document.getElementById("score-detail").innerText = paymentText;
+      }
+
+      // Initial render
+      updateToggleUI();
+      calculateScore();
+    </script>
+  </body>
+</html>
