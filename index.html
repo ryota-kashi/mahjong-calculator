@@ -40,7 +40,31 @@
       h1 {
         text-align: center;
         font-size: 1.5rem;
+        margin: 0;
+        color: var(--accent-color);
+      }
+
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 1.5rem;
+      }
+
+      .reset-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #ccc;
+        width: auto;
+        padding: 8px;
+        margin: 0;
+        transition: transform 0.3s;
+      }
+
+      .reset-btn:hover {
+        transform: rotate(180deg);
         color: var(--accent-color);
       }
 
@@ -277,53 +301,92 @@
           font-weight: normal;
       }
 
-      .fu-mentsu-grid {
+      .fu-table-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: auto 1fr 1fr;
           gap: 8px;
           margin-bottom: 16px;
+          align-items: stretch;
       }
       
-      .fu-mentsu-item {
+      .fu-th {
+          font-size: 0.75rem;
+          color: #aaa;
+          text-align: center;
+          font-weight: normal;
+          padding-bottom: 4px;
+      }
+
+      .fu-row-label {
           display: flex;
           flex-direction: column;
           align-items: center;
+          justify-content: center;
+          background: #333;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          font-weight: bold;
+          color: #ddd;
+          padding: 4px;
       }
 
-      .fu-mentsu-item .label {
-          font-size: 0.7rem;
-          color: #aaa;
-          margin-bottom: 4px;
-          text-align: center;
-          line-height: 1.1;
+      .fu-row-label span {
+          font-size: 0.65rem;
+          color: #888;
+          font-weight: normal;
+          margin-top: 2px;
       }
 
       .mentsu-btn {
           width: 100%;
-          aspect-ratio: 1;
           background-color: #333;
           border: 1px solid #555;
-          border-radius: 8px;
+          border-radius: 6px;
           color: #fff;
           font-size: 1.2rem;
           font-weight: bold;
           cursor: pointer;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0;
+          padding: 8px 0;
+          position: relative;
+          transition: all 0.2s;
+      }
+
+      .mentsu-btn .fu-badge {
+          font-size: 0.65rem;
+          color: #aaa;
+          margin-top: 4px;
+          font-weight: normal;
       }
       
-      .mentsu-btn[data-count="1"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
-      .mentsu-btn[data-count="2"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
-      .mentsu-btn[data-count="3"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
-      .mentsu-btn[data-count="4"] { background-color: #1e3a5f; border-color: #4dabf5; color: #4dabf5; }
+      .mentsu-btn:hover {
+          background-color: #444;
+      }
+
+      .mentsu-btn[data-count="1"],
+      .mentsu-btn[data-count="2"],
+      .mentsu-btn[data-count="3"],
+      .mentsu-btn[data-count="4"] { 
+          background-color: #1e3a5f; 
+          border-color: #4dabf5; 
+          color: #4dabf5; 
+      }
+      
+      .mentsu-btn[data-count]:not([data-count="0"]) .fu-badge {
+          color: #82c4f8;
+      }
 
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>🀄 点数計算機</h1>
+      <div class="header-row">
+        <h1>🀄 点数計算機</h1>
+        <button type="button" class="reset-btn" onclick="resetAll()" title="すべてリセット">🔄</button>
+      </div>
       
       <div id="app">
         <div class="control-group">
@@ -424,41 +487,42 @@
             <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
             <div class="fu-section-title">面子 (タップで個数追加)</div>
             
-            <div class="fu-mentsu-grid">
-                <div class="fu-mentsu-item">
-                    <div class="label">2〜8<br>ポン (2)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kotsu-mo" onclick="addMentsu('kotsu-mo')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">2〜8<br>暗刻 (4)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kotsu-mc" onclick="addMentsu('kotsu-mc')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">1･9･字<br>ポン (4)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kotsu-yo" onclick="addMentsu('kotsu-yo')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">1･9･字<br>暗刻 (8)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kotsu-yc" onclick="addMentsu('kotsu-yc')">0</button>
-                </div>
+            <div class="fu-table-grid">
+                <div class="fu-th">種類</div>
+                <div class="fu-th">2〜8<br><span style="font-size:0.6rem">(中張牌)</span></div>
+                <div class="fu-th">1・9・字<br><span style="font-size:0.6rem">(幺九牌)</span></div>
                 
-                <!-- Kantsu -->
-                <div class="fu-mentsu-item">
-                    <div class="label">2〜8<br>明カン (8)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kan-mo" onclick="addMentsu('kan-mo')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">2〜8<br>暗カン (16)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kan-mc" onclick="addMentsu('kan-mc')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">1･9･字<br>明カン (16)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kan-yo" onclick="addMentsu('kan-yo')">0</button>
-                </div>
-                <div class="fu-mentsu-item">
-                    <div class="label">1･9･字<br>暗カン (32)</div>
-                    <button type="button" class="mentsu-btn" id="btn-kan-yc" onclick="addMentsu('kan-yc')">0</button>
-                </div>
+                <div class="fu-row-label">ポン<span>明刻</span></div>
+                <button type="button" class="mentsu-btn" id="btn-kotsu-mo" onclick="addMentsu('kotsu-mo')">
+                    <span class="count">0</span><div class="fu-badge">2符</div>
+                </button>
+                <button type="button" class="mentsu-btn" id="btn-kotsu-yo" onclick="addMentsu('kotsu-yo')">
+                    <span class="count">0</span><div class="fu-badge">4符</div>
+                </button>
+
+                <div class="fu-row-label">暗刻<span>手の内</span></div>
+                <button type="button" class="mentsu-btn" id="btn-kotsu-mc" onclick="addMentsu('kotsu-mc')">
+                    <span class="count">0</span><div class="fu-badge">4符</div>
+                </button>
+                <button type="button" class="mentsu-btn" id="btn-kotsu-yc" onclick="addMentsu('kotsu-yc')">
+                    <span class="count">0</span><div class="fu-badge">8符</div>
+                </button>
+
+                <div class="fu-row-label">明カン<span>ポン+1</span></div>
+                <button type="button" class="mentsu-btn" id="btn-kan-mo" onclick="addMentsu('kan-mo')">
+                    <span class="count">0</span><div class="fu-badge">8符</div>
+                </button>
+                <button type="button" class="mentsu-btn" id="btn-kan-yo" onclick="addMentsu('kan-yo')">
+                    <span class="count">0</span><div class="fu-badge">16符</div>
+                </button>
+
+                <div class="fu-row-label">暗カン<span>手の内</span></div>
+                <button type="button" class="mentsu-btn" id="btn-kan-mc" onclick="addMentsu('kan-mc')">
+                    <span class="count">0</span><div class="fu-badge">16符</div>
+                </button>
+                <button type="button" class="mentsu-btn" id="btn-kan-yc" onclick="addMentsu('kan-yc')">
+                    <span class="count">0</span><div class="fu-badge">32符</div>
+                </button>
             </div>
 
             <div class="calc-result-preview" id="calc-preview">
@@ -489,6 +553,33 @@
               'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
           }
       };
+      
+      function resetAll() {
+          state = {
+              isDealer: false, // false = 子, true = 親
+              isTsumo: false,  // false = ロン, true = ツモ
+              han: 1,
+              fu: 30,
+              honba: 0
+          };
+          fuState = {
+              menzen: true,
+              head: 0,
+              wait: 0,
+              mentsu: {
+                  'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
+                  'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
+              }
+          };
+          
+          document.getElementById('han-select').value = "1";
+          document.getElementById('fu-select').value = "30";
+          document.getElementById('honba-display').innerText = "0本場";
+          
+          updateToggleUI();
+          updateFuUI();
+          calculateScore();
+      }
 
       function updateHonba(delta) {
           let newVal = state.honba + delta;
@@ -543,7 +634,8 @@
           for (const key in fuState.mentsu) {
               const btn = document.getElementById(`btn-${key}`);
               if (btn) {
-                  btn.innerText = fuState.mentsu[key];
+                  const countSpan = btn.querySelector('.count');
+                  if (countSpan) countSpan.innerText = fuState.mentsu[key];
                   btn.setAttribute('data-count', fuState.mentsu[key]);
               }
           }
