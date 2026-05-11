@@ -75,12 +75,11 @@
       .reset-btn {
         background: var(--glass-thick);
         border: 1px solid var(--glass-border);
-        font-size: 1.1rem;
         cursor: pointer;
         color: var(--text-secondary);
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -184,17 +183,18 @@
       }
 
       .result-score {
-        font-size: 2.8rem;
+        font-size: 3.2rem;
         font-weight: 700;
-        margin: 4px 0;
-        color: var(--text-primary);
-        text-shadow: 0 0 20px var(--accent-glow);
+        margin: 8px 0;
+        color: var(--accent);
+        text-shadow: 0 0 30px var(--accent-glow);
       }
       
       .result-detail {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        font-weight: 500;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+        font-weight: 400;
+        opacity: 0.9;
       }
 
       .copy-btn {
@@ -242,9 +242,9 @@
       }
       
       .toggle-btn.active {
-          background: var(--accent);
+          background: linear-gradient(135deg, var(--accent), var(--accent-hover));
           color: #052e16;
-          box-shadow: 0 2px 8px var(--accent-glow);
+          box-shadow: 0 4px 12px var(--accent-glow);
       }
 
       /* Modal Styles */
@@ -290,18 +290,30 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
-        position: sticky;
-        top: 0;
-        background: inherit;
-        z-index: 5;
-        padding-bottom: 10px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--glass-border);
       }
 
       .modal-header h2 {
         margin: 0;
-        font-size: 1.2rem;
-        color: var(--accent);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .close-modal-btn {
+          background: var(--glass-thick);
+          border: none;
+          color: var(--text-secondary);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 1.2rem;
       }
       
       .calc-result-preview {
@@ -315,14 +327,19 @@
       }
 
       .helper-btn {
-          margin-top: 8px;
-          background-color: var(--glass-thick);
-          border: 1px solid var(--glass-border);
-          color: var(--text-primary);
+          margin-top: 12px;
+          background-color: transparent;
+          border: 1px solid var(--accent);
+          color: var(--accent);
           font-weight: 600;
+          font-size: 0.85rem;
+          letter-spacing: 0.02em;
+          border-radius: 12px;
+          transition: all 0.2s;
       }
       .helper-btn:hover {
-          background-color: var(--glass-border);
+          background-color: rgba(74, 222, 128, 0.05);
+          transform: translateY(-1px);
       }
 
       .honba-control {
@@ -482,7 +499,9 @@
     <div class="container">
       <div class="header-row">
         <h1>🀄 点数計算機</h1>
-        <button type="button" class="reset-btn" onclick="resetAll()" title="すべてリセット">🔄</button>
+        <button type="button" class="reset-btn" onclick="resetAll()" title="すべてリセット">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
       </div>
       
       <div id="app">
@@ -545,8 +564,7 @@
         </div>
 
         <div class="result-area" id="result-area">
-            <button type="button" class="copy-btn" onclick="copyResult()">📋 Copy</button>
-            <div class="result-label">RESULT</div>
+            <div class="result-label">WINNING SCORE</div>
             <div class="result-score" id="score-display">---</div>
             <div class="result-detail" id="score-detail">---</div>
         </div>
@@ -557,8 +575,8 @@
     <div class="modal-overlay" id="fu-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>符数計算</h2>
-                <button type="button" onclick="closeFuModal()" style="width: auto; background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                <h2>符数計算アシスト</h2>
+                <button type="button" class="close-modal-btn" onclick="closeFuModal()">&times;</button>
             </div>
             
             <!-- Fu Calculation Content (Button Style) -->
@@ -933,24 +951,6 @@
           ${scoreText} <span style="font-size: 1rem; font-weight: normal;">${yakushokuDisplay}</span>
         `;
         document.getElementById("score-detail").innerText = paymentText;
-      }
-
-      function copyResult() {
-          const score = document.getElementById('score-display').innerText;
-          const detail = document.getElementById('score-detail').innerText;
-          if (score === "---") return;
-          
-          const text = `${score} (${detail})`;
-          navigator.clipboard.writeText(text).then(() => {
-              const btn = document.querySelector('.copy-btn');
-              const originalText = btn.innerHTML;
-              btn.innerHTML = "✅ Copied!";
-              btn.style.borderColor = "var(--accent)";
-              setTimeout(() => { 
-                  btn.innerHTML = originalText;
-                  btn.style.borderColor = "";
-              }, 2000);
-          });
       }
 
       // Initial render
