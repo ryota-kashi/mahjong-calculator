@@ -5,19 +5,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>麻雀点数計算機 | Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-dark: #050505;
-        --accent: #4ade80;
-        --accent-hover: #22c55e;
-        --accent-glow: rgba(74, 222, 128, 0.25);
-        --glass: rgba(255, 255, 255, 0.03);
-        --glass-thick: rgba(255, 255, 255, 0.07);
-        --glass-border: rgba(255, 255, 255, 0.12);
-        --text-primary: #f8fafc;
-        --text-secondary: #94a3b8;
-        --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        --bg: #f5f2eb;
+        --bg-card: #ffffff;
+        --green: #3a7a50;
+        --green-light: #ede8de;
+        --border: #d8d4cc;
+        --text-main: #1a1a1a;
+        --text-sub: #999999;
+        --text-on-green: #ffffff;
+        --text-on-green-sub: rgba(255, 255, 255, 0.55);
       }
       
       * {
@@ -26,13 +24,9 @@
       }
 
       body {
-        font-family: 'Outfit', sans-serif;
-        background-color: var(--bg-dark);
-        background-image: 
-            radial-gradient(circle at 50% -20%, #0a2e1f, transparent),
-            radial-gradient(circle at 0% 100%, #051510, transparent);
-        background-attachment: fixed;
-        color: var(--text-primary);
+        font-family: -apple-system, 'Helvetica Neue', sans-serif;
+        background-color: var(--bg);
+        color: var(--text-main);
         margin: 0;
         padding: 16px;
         display: flex;
