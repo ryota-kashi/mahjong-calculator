@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>緑の濃さ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .page-title { text-align: center; font-size: 1.05rem; color: #ccc; margin-bottom: 4px; }
+  .page-subtitle { text-align: center; font-size: 0.8rem; color: #555; margin-bottom: 28px; }
+  .cards-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .design-card {
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.22s ease;
+  }
+  .design-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  .design-card.selected { border-color: #f5c842; box-shadow: 0 0 0 1px #f5c842, 0 12px 40px rgba(245,200,66,0.25); }
+  .preview-area { height: 460px; overflow: hidden; position: relative; }
+  .card-meta { padding: 12px 14px; }
+  .card-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; }
+  .card-desc { font-size: 0.74rem; color: #666; line-height: 1.4; }
+  .select-badge {
+    display: none;
+    position: absolute; top: 10px; right: 10px;
+    background: #f5c842; color: #1a1200;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; z-index: 10;
+  }
+  .design-card.selected .select-badge { display: block; }
+
+  /* ===== SHARED B寄りC STRUCTURE ===== */
+  .app {
+    background: #f5f2eb;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .app-header {
+    padding: 14px 16px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-title { font-size: 0.88rem; font-weight: 700; color: #1a1a1a; letter-spacing: 0.04em; }
+  .app-reset {
+    width: 26px; height: 26px;
+    border: 1.5px solid #d4c8a0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+  }
+  .app-body { padding: 14px; flex: 1; }
+  .app-label {
+    font-size: 0.58rem; font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .app-toggle {
+    display: flex;
+    border: 1.5px solid #d8d4cc;
+    border-radius: 8px; overflow: hidden; margin-bottom: 11px;
+  }
+  .app-btn {
+    flex: 1; padding: 8px; text-align: center;
+    font-size: 0.82rem; color: #aaa; background: #fff; font-weight: 500;
+  }
+  .app-select {
+    width: 100%; padding: 9px 11px;
+    border: 1.5px solid #d8d4cc; border-radius: 8px;
+    color: #1a1a1a; font-size: 0.82rem; margin-bottom: 11px;
+    background: #fff;
+  }
+  .app-honba {
+    display: flex; align-items: center;
+    border: 1.5px solid #d8d4cc; border-radius: 8px;
+    overflow: hidden; margin-bottom: 11px;
+  }
+  .app-hbtn {
+    width: 38px; height: 36px;
+    background: #ede8de;
+    font-size: 1.1rem; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+  }
+  .app-hval { flex: 1; text-align: center; color: #1a1a1a; font-size: 0.85rem; font-weight: 600; }
+  .app-result {
+    border-radius: 10px; padding: 14px; text-align: center;
+  }
+  .app-rlabel { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
+  .app-rscore { font-size: 2.4rem; font-weight: 700; color: #f5c842; margin: 4px 0; }
+  .app-rdetail { font-size: 0.75rem; color: rgba(255,255,255,0.55); }
+  .app-calcbtn {
+    width: 100%; margin-top: 9px; padding: 10px;
+    background: transparent;
+    font-size: 0.82rem; font-weight: 700; text-align: center;
+    border-radius: 8px;
+  }
+
+  /* ---- SHADE 1: 元のまま深緑 #2d5a3d ---- */
+  .s1 .app-header { border-bottom: 2px solid #2d5a3d; }
+  .s1 .app-reset { color: #6a8050; border-color: #c0b880; }
+  .s1 .app-label { color: #2d5a3d; }
+  .s1 .app-btn.act { background: #2d5a3d; color: #fff; font-weight: 700; }
+  .s1 .app-hbtn { color: #2d5a3d; }
+  .s1 .app-result { background: #2d5a3d; }
+  .s1 .app-rlabel { color: rgba(245,200,66,0.75); }
+  .s1 .app-calcbtn { border: 1.5px solid #2d5a3d; color: #2d5a3d; }
+
+  /* ---- SHADE 2: やや明るい緑 #3a7a50 ---- */
+  .s2 .app-header { border-bottom: 2px solid #3a7a50; }
+  .s2 .app-reset { color: #5a9068; border-color: #c0b880; }
+  .s2 .app-label { color: #3a7a50; }
+  .s2 .app-btn.act { background: #3a7a50; color: #fff; font-weight: 700; }
+  .s2 .app-hbtn { color: #3a7a50; }
+  .s2 .app-result { background: #3a7a50; }
+  .s2 .app-rlabel { color: rgba(245,200,66,0.75); }
+  .s2 .app-calcbtn { border: 1.5px solid #3a7a50; color: #3a7a50; }
+
+  /* ---- SHADE 3: 明るい緑 #4a9660 ---- */
+  .s3 .app-header { border-bottom: 2px solid #4a9660; }
+  .s3 .app-reset { color: #5aaa70; border-color: #c0b880; }
+  .s3 .app-label { color: #4a9660; }
+  .s3 .app-btn.act { background: #4a9660; color: #fff; font-weight: 700; }
+  .s3 .app-hbtn { color: #4a9660; }
+  .s3 .app-result { background: #4a9660; }
+  .s3 .app-rlabel { color: rgba(245,200,66,0.75); }
+  .s3 .app-calcbtn { border: 1.5px solid #4a9660; color: #4a9660; }
+</style>
+</head>
+<body>
+  <p class="page-title">緑の明るさを選んでください</p>
+  <p class="page-subtitle">B寄りのC ベースで3段階</p>
+
+  <div class="cards-wrapper">
+
+    <!-- Shade 1 -->
+    <div class="design-card" id="card-s1" onclick="select(this, 's1')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area s1">
+        <div class="app">
+          <div class="app-header">
+            <div class="app-title">点数計算機</div>
+            <div class="app-reset">↺</div>
+          </div>
+          <div class="app-body">
+            <div class="app-label">親 / 子</div>
+            <div class="app-toggle">
+              <div class="app-btn act">親（東）</div>
+              <div class="app-btn">子（南）</div>
+            </div>
+            <div class="app-label">アガリ方</div>
+            <div class="app-toggle">
+              <div class="app-btn act">ロン</div>
+              <div class="app-btn">ツモ</div>
+            </div>
+            <div class="app-label">翻数</div>
+            <div class="app-select">3翻</div>
+            <div class="app-label">符数</div>
+            <div class="app-select">30符</div>
+            <div class="app-label">本場</div>
+            <div class="app-honba">
+              <div class="app-hbtn">−</div>
+              <div class="app-hval">0本場</div>
+              <div class="app-hbtn">＋</div>
+            </div>
+            <div class="app-result">
+              <div class="app-rlabel">点数</div>
+              <div class="app-rscore">3,900</div>
+              <div class="app-rdetail">ロン</div>
+            </div>
+            <div class="app-calcbtn">符数計算アシスト</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-meta" style="background:#1a1a1a;">
+        <div class="card-name" style="color:#6ab080;">S1 — 深緑（現状）</div>
+        <div class="card-desc" style="color:#666;">#2d5a3d &nbsp;濃くて落ち着いた緑</div>
+      </div>
+    </div>
+
+    <!-- Shade 2 -->
+    <div class="design-card" id="card-s2" onclick="select(this, 's2')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area s2">
+        <div class="app">
+          <div class="app-header">
+            <div class="app-title">点数計算機</div>
+            <div class="app-reset">↺</div>
+          </div>
+          <div class="app-body">
+            <div class="app-label">親 / 子</div>
+            <div class="app-toggle">
+              <div class="app-btn act">親（東）</div>
+              <div class="app-btn">子（南）</div>
+            </div>
+            <div class="app-label">アガリ方</div>
+            <div class="app-toggle">
+              <div class="app-btn act">ロン</div>
+              <div class="app-btn">ツモ</div>
+            </div>
+            <div class="app-label">翻数</div>
+            <div class="app-select">3翻</div>
+            <div class="app-label">符数</div>
+            <div class="app-select">30符</div>
+            <div class="app-label">本場</div>
+            <div class="app-honba">
+              <div class="app-hbtn">−</div>
+              <div class="app-hval">0本場</div>
+              <div class="app-hbtn">＋</div>
+            </div>
+            <div class="app-result">
+              <div class="app-rlabel">点数</div>
+              <div class="app-rscore">3,900</div>
+              <div class="app-rdetail">ロン</div>
+            </div>
+            <div class="app-calcbtn">符数計算アシスト</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-meta" style="background:#1a1a1a;">
+        <div class="card-name" style="color:#6ab880;">S2 — ミドル緑</div>
+        <div class="card-desc" style="color:#666;">#3a7a50 &nbsp;ほどよく明るい</div>
+      </div>
+    </div>
+
+    <!-- Shade 3 -->
+    <div class="design-card" id="card-s3" onclick="select(this, 's3')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area s3">
+        <div class="app">
+          <div class="app-header">
+            <div class="app-title">点数計算機</div>
+            <div class="app-reset">↺</div>
+          </div>
+          <div class="app-body">
+            <div class="app-label">親 / 子</div>
+            <div class="app-toggle">
+              <div class="app-btn act">親（東）</div>
+              <div class="app-btn">子（南）</div>
+            </div>
+            <div class="app-label">アガリ方</div>
+            <div class="app-toggle">
+              <div class="app-btn act">ロン</div>
+              <div class="app-btn">ツモ</div>
+            </div>
+            <div class="app-label">翻数</div>
+            <div class="app-select">3翻</div>
+            <div class="app-label">符数</div>
+            <div class="app-select">30符</div>
+            <div class="app-label">本場</div>
+            <div class="app-honba">
+              <div class="app-hbtn">−</div>
+              <div class="app-hval">0本場</div>
+              <div class="app-hbtn">＋</div>
+            </div>
+            <div class="app-result">
+              <div class="app-rlabel">点数</div>
+              <div class="app-rscore">3,900</div>
+              <div class="app-rdetail">ロン</div>
+            </div>
+            <div class="app-calcbtn">符数計算アシスト</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-meta" style="background:#1a1a1a;">
+        <div class="card-name" style="color:#6acc80;">S3 — 明るめ緑</div>
+        <div class="card-desc" style="color:#666;">#4a9660 &nbsp;明るくフレッシュな緑</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function select(el, choice) {
+      document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      if (window.recordChoice) recordChoice(choice, el.querySelector('.card-name').innerText.trim());
+    }
+  </script>
+</body>
+</html>

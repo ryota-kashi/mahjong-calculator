@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>点数カラー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .page-title { text-align: center; font-size: 1.05rem; color: #ccc; margin-bottom: 4px; }
+  .page-subtitle { text-align: center; font-size: 0.8rem; color: #555; margin-bottom: 28px; }
+
+  .cards-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .design-card {
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.22s ease;
+  }
+  .design-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
+  .design-card.selected { border-color: #3a7a50; box-shadow: 0 0 0 1px #3a7a50, 0 12px 36px rgba(58,122,80,0.3); }
+  .preview-area { overflow: hidden; position: relative; }
+  .card-meta { padding: 11px 13px; background: #1c1c1c; }
+  .card-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 3px; }
+  .card-desc { font-size: 0.72rem; color: #666; line-height: 1.4; }
+  .select-badge {
+    display: none;
+    position: absolute; top: 8px; right: 8px;
+    background: #3a7a50; color: #fff;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; z-index: 10;
+  }
+  .design-card.selected .select-badge { display: block; }
+
+  /* 共通パーツ */
+  .result-box {
+    background: #3a7a50;
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+    margin: 0;
+  }
+  .result-label {
+    font-size: 0.58rem; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 6px;
+  }
+  .result-score {
+    font-size: 3rem; font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .result-detail {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* 点数ボタン + トグルのミニプレビュー */
+  .mini-app {
+    background: #f5f2eb;
+    padding: 14px;
+  }
+  .mini-toggle {
+    display: flex;
+    border: 1.5px solid #d8d4cc;
+    border-radius: 8px; overflow: hidden; margin-bottom: 10px;
+  }
+  .mini-btn {
+    flex: 1; padding: 8px; text-align: center;
+    font-size: 0.78rem; color: #aaa; background: #fff;
+  }
+  .mini-btn.act { background: #3a7a50; color: #fff; font-weight: 700; }
+  .mini-label {
+    font-size: 0.58rem; font-weight: 700;
+    color: #3a7a50; letter-spacing: 0.14em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .mini-calcbtn {
+    width: 100%; margin-top: 10px; padding: 9px;
+    background: transparent;
+    border: 1.5px solid #3a7a50;
+    color: #3a7a50; border-radius: 8px;
+    font-size: 0.78rem; font-weight: 700; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <p class="page-title">点数の文字色を選んでください</p>
+  <p class="page-subtitle">緑 (#3a7a50) のパネル上での見え方</p>
+
+  <div class="cards-wrapper">
+
+    <!-- 白 -->
+    <div class="design-card" id="c1" onclick="select(this, 'white')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area">
+        <div class="mini-app">
+          <div class="mini-label">アガリ方</div>
+          <div class="mini-toggle">
+            <div class="mini-btn act">ロン</div>
+            <div class="mini-btn">ツモ</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">点数</div>
+            <div class="result-score" style="color:#ffffff;">3,900</div>
+            <div class="result-detail">ロン</div>
+          </div>
+          <div class="mini-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#ddd;">白 — #ffffff</div>
+        <div class="card-desc">シンプルで最も読みやすい。スッキリ感。</div>
+      </div>
+    </div>
+
+    <!-- クリーム -->
+    <div class="design-card" id="c2" onclick="select(this, 'cream')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area">
+        <div class="mini-app">
+          <div class="mini-label">アガリ方</div>
+          <div class="mini-toggle">
+            <div class="mini-btn act">ロン</div>
+            <div class="mini-btn">ツモ</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">点数</div>
+            <div class="result-score" style="color:#fdf4dc;">3,900</div>
+            <div class="result-detail">ロン</div>
+          </div>
+          <div class="mini-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#fdf4dc;">クリーム — #fdf4dc</div>
+        <div class="card-desc">白より温かみあり。和紙のような落ち着いた色。</div>
+      </div>
+    </div>
+
+    <!-- 薄い緑 -->
+    <div class="design-card" id="c3" onclick="select(this, 'lightgreen')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area">
+        <div class="mini-app">
+          <div class="mini-label">アガリ方</div>
+          <div class="mini-toggle">
+            <div class="mini-btn act">ロン</div>
+            <div class="mini-btn">ツモ</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">点数</div>
+            <div class="result-score" style="color:#d4f0de;">3,900</div>
+            <div class="result-detail">ロン</div>
+          </div>
+          <div class="mini-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#a8ddb8;">薄い緑 — #d4f0de</div>
+        <div class="card-desc">緑同系でまとめる。落ち着きとまとまり感。</div>
+      </div>
+    </div>
+
+    <!-- ライトグレー -->
+    <div class="design-card" id="c4" onclick="select(this, 'lightgray')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area">
+        <div class="mini-app">
+          <div class="mini-label">アガリ方</div>
+          <div class="mini-toggle">
+            <div class="mini-btn act">ロン</div>
+            <div class="mini-btn">ツモ</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">点数</div>
+            <div class="result-score" style="color:#e8eee9;">3,900</div>
+            <div class="result-detail">ロン</div>
+          </div>
+          <div class="mini-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#b0bdb2;">グレイッシュ — #e8eee9</div>
+        <div class="card-desc">白より少しトーンを落とした控えめな明るさ。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function select(el, choice) {
+      document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      if (window.recordChoice) recordChoice(choice, el.querySelector('.card-name').innerText.trim());
+    }
+  </script>
+</body>
+</html>

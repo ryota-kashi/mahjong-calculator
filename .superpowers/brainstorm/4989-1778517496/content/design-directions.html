@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デザイン方向性</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #aaa;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .page-subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 28px;
+  }
+  .cards-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .design-card {
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.25s ease;
+    background: #111;
+  }
+  .design-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .design-card.selected {
+    border-color: #4ade80;
+    box-shadow: 0 0 0 1px #4ade80, 0 12px 40px rgba(74, 222, 128, 0.2);
+  }
+  .preview-area {
+    height: 420px;
+    overflow: hidden;
+    position: relative;
+  }
+  .card-meta {
+    padding: 14px 16px;
+    background: #1c1c2e;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .card-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .card-desc {
+    font-size: 0.78rem;
+    color: #888;
+    line-height: 1.4;
+  }
+  .select-badge {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #4ade80;
+    color: #052e16;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    z-index: 10;
+  }
+  .design-card.selected .select-badge { display: block; }
+
+  /* ===== Design A Preview: 和風 (Japanese Traditional) ===== */
+  .preview-a {
+    background: #1a0a05;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    position: relative;
+  }
+  .preview-a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 18px,
+      rgba(180,60,20,0.04) 18px,
+      rgba(180,60,20,0.04) 19px
+    );
+  }
+  .pa-header {
+    padding: 18px 18px 12px;
+    border-bottom: 1px solid rgba(180,60,20,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+  .pa-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e8c98a;
+    letter-spacing: 0.12em;
+  }
+  .pa-reset {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(180,60,20,0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b44c1e;
+    font-size: 0.8rem;
+  }
+  .pa-body {
+    padding: 16px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .pa-label {
+    font-size: 0.65rem;
+    color: #b44c1e;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+    font-family: sans-serif;
+    text-transform: uppercase;
+  }
+  .pa-toggle {
+    display: flex;
+    border: 1px solid rgba(180,60,20,0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .pa-btn {
+    flex: 1;
+    padding: 9px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #a07040;
+    background: rgba(180,60,20,0.05);
+    font-family: 'Hiragino Mincho ProN', serif;
+    font-weight: 500;
+  }
+  .pa-btn.act {
+    background: #b44c1e;
+    color: #fdf5e8;
+    font-weight: 700;
+  }
+  .pa-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(180,60,20,0.08);
+    border: 1px solid rgba(180,60,20,0.25);
+    border-radius: 8px;
+    color: #e8c98a;
+    font-size: 0.88rem;
+    margin-bottom: 14px;
+    font-family: serif;
+  }
+  .pa-honba {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(180,60,20,0.06);
+    border: 1px solid rgba(180,60,20,0.25);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 14px;
+  }
+  .pa-hbtn {
+    width: 36px;
+    height: 36px;
+    background: rgba(180,60,20,0.12);
+    border: 1px solid rgba(180,60,20,0.2);
+    border-radius: 6px;
+    color: #b44c1e;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pa-hval { flex: 1; text-align: center; color: #e8c98a; font-size: 0.9rem; font-weight: 700; }
+  .pa-result {
+    background: rgba(180,60,20,0.1);
+    border: 1px solid rgba(180,60,20,0.3);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    position: relative;
+  }
+  .pa-result::before {
+    content: '—';
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a0a05;
+    padding: 0 8px;
+    color: rgba(180,60,20,0.5);
+    font-size: 0.7rem;
+  }
+  .pa-rlabel { font-size: 0.62rem; color: #b44c1e; letter-spacing: 0.15em; text-transform: uppercase; font-family: sans-serif; }
+  .pa-rscore { font-size: 2.5rem; font-weight: 700; color: #e8c98a; font-family: sans-serif; margin: 4px 0; }
+  .pa-rdetail { font-size: 0.8rem; color: #a07040; font-family: sans-serif; }
+  .pa-calcbtn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 11px;
+    background: linear-gradient(135deg, #b44c1e, #8b3512);
+    color: #fdf5e8;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.05em;
+    font-family: sans-serif;
+  }
+
+  /* ===== Design B Preview: 日本ミニマル ===== */
+  .preview-b {
+    background: #f8f6f1;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  }
+  .pb-header {
+    padding: 16px 18px;
+    border-bottom: 2px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pb-title { font-size: 1rem; font-weight: 700; color: #1a1a1a; letter-spacing: 0.05em; }
+  .pb-reset {
+    width: 26px;
+    height: 26px;
+    border: 1.5px solid #ccc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 0.75rem;
+  }
+  .pb-body { padding: 16px; flex: 1; }
+  .pb-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .pb-toggle {
+    display: flex;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .pb-btn {
+    flex: 1;
+    padding: 9px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #999;
+    background: #fff;
+    font-weight: 500;
+  }
+  .pb-btn.act {
+    background: #1a1a1a;
+    color: #fff;
+    font-weight: 700;
+  }
+  .pb-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+  .pb-honba {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .pb-hbtn {
+    width: 40px;
+    height: 38px;
+    background: #f0ece6;
+    color: #1a1a1a;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .pb-hval { flex: 1; text-align: center; color: #1a1a1a; font-size: 0.88rem; font-weight: 600; }
+  .pb-result {
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .pb-rlabel { font-size: 0.6rem; font-weight: 700; color: #888; letter-spacing: 0.15em; text-transform: uppercase; }
+  .pb-rscore { font-size: 2.6rem; font-weight: 700; color: #fff; margin: 4px 0; }
+  .pb-rdetail { font-size: 0.78rem; color: #aaa; }
+  .pb-calcbtn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 11px;
+    background: transparent;
+    border: 1.5px solid #1a1a1a;
+    color: #1a1a1a;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.03em;
+  }
+
+  /* ===== Design C Preview: 卓上 (Mahjong Table) ===== */
+  .preview-c {
+    background: #1b3d25;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background-image:
+      radial-gradient(circle at 30% 20%, rgba(255,200,80,0.06), transparent 50%),
+      radial-gradient(circle at 70% 80%, rgba(255,200,80,0.04), transparent 50%);
+  }
+  .pc-header {
+    padding: 14px 16px;
+    background: #142d1c;
+    border-bottom: 1px solid rgba(255,200,80,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pc-title { font-size: 0.95rem; font-weight: 700; color: #f5c842; letter-spacing: 0.06em; }
+  .pc-reset {
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f5c842;
+    font-size: 0.75rem;
+  }
+  .pc-body { padding: 14px; flex: 1; }
+  .pc-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: rgba(245,200,66,0.7);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .pc-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .pc-btn {
+    flex: 1;
+    padding: 9px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(245,200,66,0.5);
+    background: rgba(245,200,66,0.05);
+    border: 1px solid rgba(245,200,66,0.15);
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .pc-btn.act {
+    background: rgba(245,200,66,0.15);
+    border-color: rgba(245,200,66,0.5);
+    color: #f5c842;
+    font-weight: 700;
+  }
+  .pc-select {
+    width: 100%;
+    padding: 9px 12px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 8px;
+    color: #e8dcc0;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .pc-honba {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(245,200,66,0.15);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 12px;
+  }
+  .pc-hbtn {
+    width: 36px;
+    height: 36px;
+    background: rgba(245,200,66,0.1);
+    border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 6px;
+    color: #f5c842;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pc-hval { flex: 1; text-align: center; color: #e8dcc0; font-size: 0.88rem; font-weight: 600; }
+  .pc-result {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(245,200,66,0.25);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .pc-rlabel { font-size: 0.6rem; font-weight: 700; color: rgba(245,200,66,0.6); letter-spacing: 0.15em; text-transform: uppercase; }
+  .pc-rscore { font-size: 2.6rem; font-weight: 700; color: #f5c842; margin: 4px 0; }
+  .pc-rdetail { font-size: 0.78rem; color: #a8c8a0; }
+  .pc-calcbtn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 11px;
+    background: rgba(245,200,66,0.15);
+    border: 1px solid rgba(245,200,66,0.35);
+    color: #f5c842;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+  <p class="page-title" style="color:#ccc;font-size:1.1rem;margin-bottom:4px;">デザイン方向性を選んでください</p>
+  <p class="page-subtitle">3つのスタイルから好みに近いものをクリック</p>
+
+  <div class="cards-wrapper">
+
+    <!-- Design A: 和風 -->
+    <div class="design-card" id="card-a" onclick="select(this, 'a')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area preview-a">
+        <div class="pa-header">
+          <div class="pa-title">麻雀点数計算機</div>
+          <div class="pa-reset">↺</div>
+        </div>
+        <div class="pa-body">
+          <div class="pa-label">親 / 子</div>
+          <div class="pa-toggle">
+            <div class="pa-btn act">親（東）</div>
+            <div class="pa-btn">子（南）</div>
+          </div>
+          <div class="pa-label">アガリ方</div>
+          <div class="pa-toggle">
+            <div class="pa-btn act">ロン</div>
+            <div class="pa-btn">ツモ</div>
+          </div>
+          <div class="pa-label">翻数</div>
+          <div class="pa-select">3翻</div>
+          <div class="pa-label">符数</div>
+          <div class="pa-select">30符</div>
+          <div class="pa-label">本場</div>
+          <div class="pa-honba">
+            <div class="pa-hbtn">−</div>
+            <div class="pa-hval">0本場</div>
+            <div class="pa-hbtn">＋</div>
+          </div>
+          <div class="pa-result">
+            <div class="pa-rlabel">点数</div>
+            <div class="pa-rscore">3,900</div>
+            <div class="pa-rdetail">ロン</div>
+          </div>
+          <div class="pa-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#e8c98a;">A &nbsp;— 和 (Wa)</div>
+        <div class="card-desc">深い焦げ茶 × 朱赤 × 金。明朝体を活かした和風の重厚感。雀卓の雰囲気より書道・古典の趣。</div>
+      </div>
+    </div>
+
+    <!-- Design B: 日本ミニマル -->
+    <div class="design-card" id="card-b" onclick="select(this, 'b')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area preview-b">
+        <div class="pb-header">
+          <div class="pb-title">点数計算機</div>
+          <div class="pb-reset">↺</div>
+        </div>
+        <div class="pb-body">
+          <div class="pb-label">親 / 子</div>
+          <div class="pb-toggle">
+            <div class="pb-btn act">親（東）</div>
+            <div class="pb-btn">子（南）</div>
+          </div>
+          <div class="pb-label">アガリ方</div>
+          <div class="pb-toggle">
+            <div class="pb-btn act">ロン</div>
+            <div class="pb-btn">ツモ</div>
+          </div>
+          <div class="pb-label">翻数</div>
+          <div class="pb-select">3翻</div>
+          <div class="pb-label">符数</div>
+          <div class="pb-select">30符</div>
+          <div class="pb-label">本場</div>
+          <div class="pb-honba">
+            <div class="pb-hbtn">−</div>
+            <div class="pb-hval">0本場</div>
+            <div class="pb-hbtn">＋</div>
+          </div>
+          <div class="pb-result">
+            <div class="pb-rlabel">点数</div>
+            <div class="pb-rscore">3,900</div>
+            <div class="pb-rdetail">ロン</div>
+          </div>
+          <div class="pb-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#ddd;">B &nbsp;— ミニマル (Minimal)</div>
+        <div class="card-desc">白地 × 黒。余白重視の日本的ミニマリズム。ノイズなく数字が際立ち、実用性が高い。</div>
+      </div>
+    </div>
+
+    <!-- Design C: 卓上 (Mahjong Table) -->
+    <div class="design-card" id="card-c" onclick="select(this, 'c')">
+      <div class="select-badge">✓ 選択中</div>
+      <div class="preview-area preview-c">
+        <div class="pc-header">
+          <div class="pc-title">麻雀点数計算機</div>
+          <div class="pc-reset">↺</div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-label">親 / 子</div>
+          <div class="pc-toggle">
+            <div class="pc-btn act">親（東）</div>
+            <div class="pc-btn">子（南）</div>
+          </div>
+          <div class="pc-label">アガリ方</div>
+          <div class="pc-toggle">
+            <div class="pc-btn act">ロン</div>
+            <div class="pc-btn">ツモ</div>
+          </div>
+          <div class="pc-label">翻数</div>
+          <div class="pc-select">3翻</div>
+          <div class="pc-label">符数</div>
+          <div class="pc-select">30符</div>
+          <div class="pc-label">本場</div>
+          <div class="pc-honba">
+            <div class="pc-hbtn">−</div>
+            <div class="pc-hval">0本場</div>
+            <div class="pc-hbtn">＋</div>
+          </div>
+          <div class="pc-result">
+            <div class="pc-rlabel">点数</div>
+            <div class="pc-rscore">3,900</div>
+            <div class="pc-rdetail">ロン</div>
+          </div>
+          <div class="pc-calcbtn">符数計算アシスト</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" style="color:#f5c842;">C &nbsp;— 卓上 (Table)</div>
+        <div class="card-desc">卓上の緑フェルト × 金。実際の麻雀卓の空気感。暗めで落ち着き、プレイ中に馴染む。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let selected = null;
+    function select(el, choice) {
+      document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selected = choice;
+      if (window.recordChoice) recordChoice(choice, el.querySelector('.card-name').innerText.trim());
+    }
+  </script>
+</body>
+</html>
