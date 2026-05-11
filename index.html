@@ -3,152 +3,248 @@
   <head>
     <base target="_top">
     <meta charset="utf-8">
-    <title>麻雀点数計算機</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>麻雀点数計算機 | Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-color: #1a1a1a;
-        --card-bg: #2d2d2d;
-        --text-color: #ffffff;
-        --accent-color: #4caf50;
-        --secondary-color: #81c784;
-        --error-color: #f44336;
-        --modal-bg: rgba(0, 0, 0, 0.85);
+        --bg-dark: #050505;
+        --accent: #4ade80;
+        --accent-hover: #22c55e;
+        --accent-glow: rgba(74, 222, 128, 0.25);
+        --glass: rgba(255, 255, 255, 0.03);
+        --glass-thick: rgba(255, 255, 255, 0.07);
+        --glass-border: rgba(255, 255, 255, 0.12);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
       }
       
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: var(--bg-color);
-        color: var(--text-color);
+        font-family: 'Outfit', sans-serif;
+        background-color: var(--bg-dark);
+        background-image: 
+            radial-gradient(circle at 50% -20%, #0a2e1f, transparent),
+            radial-gradient(circle at 0% 100%, #051510, transparent);
+        background-attachment: fixed;
+        color: var(--text-primary);
         margin: 0;
-        padding: 20px;
+        padding: 16px;
         display: flex;
         flex-direction: column;
         align-items: center;
         min-height: 100vh;
-        box-sizing: border-box;
       }
 
       .container {
         width: 100%;
-        max-width: 480px;
-        background-color: var(--card-bg);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        max-width: 440px;
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 40px;
       }
 
       h1 {
         text-align: center;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
+        font-weight: 700;
         margin: 0;
-        color: var(--accent-color);
+        letter-spacing: 0.05em;
+        background: linear-gradient(to right, #4ade80, #2dd4bf);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
 
       .header-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 24px;
       }
 
       .reset-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
+        background: var(--glass-thick);
+        border: 1px solid var(--glass-border);
+        font-size: 1.1rem;
         cursor: pointer;
-        color: #ccc;
-        width: auto;
-        padding: 8px;
-        margin: 0;
-        transition: transform 0.3s;
+        color: var(--text-secondary);
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .reset-btn:hover {
         transform: rotate(180deg);
-        color: var(--accent-color);
+        color: var(--accent);
+        border-color: var(--accent);
+        background: rgba(74, 222, 128, 0.1);
       }
 
       .control-group {
-        margin-bottom: 1.5rem;
+        margin-bottom: 20px;
       }
 
       label {
         display: block;
-        margin-bottom: 0.5rem;
-        font-weight: bold;
-        color: #ccc;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
       }
 
-      select, button {
+      select {
         width: 100%;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid #444;
-        background-color: #3d3d3d;
-        color: white;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--glass-border);
+        background: var(--glass-thick);
+        color: var(--text-primary);
         font-size: 1rem;
-        margin-bottom: 0.5rem;
+        font-family: inherit;
+        appearance: none;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 18px;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
       }
 
       button.primary {
-        background-color: var(--accent-color);
+        background: linear-gradient(135deg, var(--accent), var(--accent-hover));
         border: none;
-        font-weight: bold;
-        color: #fff;
+        padding: 16px;
+        border-radius: 14px;
+        font-weight: 700;
+        color: #052e16;
         cursor: pointer;
-        transition: background-color 0.2s;
+        width: 100%;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px var(--accent-glow);
+        transition: all 0.2s;
       }
 
-      button.primary:hover {
-        background-color: var(--secondary-color);
-      }
-
-      button.secondary {
-        background-color: #555;
-        border: none;
-        color: #fff;
-        cursor: pointer;
-      }
-      
-      button.secondary:hover {
-        background-color: #666;
+      button.primary:active {
+        transform: scale(0.98);
+        filter: brightness(1.1);
       }
 
       .result-area {
-        margin-top: 2rem;
-        padding: 1rem;
-        border-radius: 8px;
-        background-color: rgba(76, 175, 80, 0.1);
+        margin-top: 32px;
+        padding: 24px;
+        border-radius: 20px;
+        background: linear-gradient(145deg, rgba(74, 222, 128, 0.08), rgba(74, 222, 128, 0.02));
         text-align: center;
-        border: 1px solid var(--accent-color);
+        border: 1px solid rgba(74, 222, 128, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .result-area::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      .result-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
       }
 
       .result-score {
-        font-size: 2rem;
-        font-weight: bold;
-        margin: 0.5rem 0;
+        font-size: 2.8rem;
+        font-weight: 700;
+        margin: 4px 0;
+        color: var(--text-primary);
+        text-shadow: 0 0 20px var(--accent-glow);
       }
       
+      .result-detail {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: var(--glass-thick);
+        border: 1px solid var(--glass-border);
+        color: var(--text-secondary);
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 2;
+      }
+      
+      .copy-btn:hover {
+        background: var(--accent);
+        color: #052e16;
+        border-color: var(--accent);
+      }
+
       .toggle-group {
           display: flex;
-          gap: 10px;
-          margin-bottom: 1rem;
+          gap: 8px;
+          background: var(--glass-thick);
+          padding: 4px;
+          border-radius: 14px;
+          border: 1px solid var(--glass-border);
       }
       
       .toggle-btn {
           flex: 1;
-          background: #444;
-          border: 1px solid #555;
-          opacity: 0.7;
+          background: transparent;
+          border: none;
+          color: var(--text-secondary);
+          padding: 10px;
+          border-radius: 10px;
           cursor: pointer;
+          font-weight: 600;
+          font-size: 0.9rem;
           transition: all 0.2s;
+          margin-bottom: 0;
       }
       
       .toggle-btn.active {
-          background: var(--accent-color);
-          opacity: 1;
-          border-color: var(--accent-color);
-          font-weight: bold;
+          background: var(--accent);
+          color: #052e16;
+          box-shadow: 0 2px 8px var(--accent-glow);
       }
 
       /* Modal Styles */
@@ -158,10 +254,12 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: var(--modal-bg);
+        background-color: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         display: none;
         justify-content: center;
-        align-items: center;
+        align-items: flex-end;
         z-index: 1000;
       }
 
@@ -170,150 +268,148 @@
       }
 
       .modal-content {
-        background-color: var(--card-bg);
-        padding: 20px;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 400px;
+        background: #0f172a;
+        background-image: radial-gradient(circle at 50% 0%, #1e293b, #0f172a);
+        padding: 24px;
+        border-radius: 32px 32px 0 0;
+        width: 100%;
+        max-width: 480px;
         max-height: 90vh;
         overflow-y: auto;
+        border: 1px solid var(--glass-border);
+        border-bottom: none;
+        animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
       }
 
       .modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 24px;
+        position: sticky;
+        top: 0;
+        background: inherit;
+        z-index: 5;
+        padding-bottom: 10px;
       }
 
       .modal-header h2 {
         margin: 0;
-        font-size: 1.25rem;
-        color: var(--accent-color);
-      }
-      
-      .fu-calc-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
-          border-bottom: 1px solid #444;
-          padding-bottom: 10px;
-      }
-      
-      .fu-calc-row label {
-          margin-bottom: 0;
-          flex: 1;
-      }
-      
-      .fu-calc-row select, .fu-calc-row input {
-          width: auto;
-          margin-bottom: 0;
-          flex: 1;
+        font-size: 1.2rem;
+        color: var(--accent);
       }
       
       .calc-result-preview {
           text-align: center;
-          font-size: 1.2rem;
-          font-weight: bold;
-          margin: 15px 0;
-          padding: 10px;
-          background: #333;
-          border-radius: 8px;
+          margin: 20px 0;
+          padding: 20px;
+          background: var(--glass-thick);
+          border-radius: 16px;
+          border: 1px solid var(--glass-border);
+          line-height: 1.5;
       }
 
       .helper-btn {
-          margin-top: 5px;
-          background-color: #2196f3;
-          border: none;
+          margin-top: 8px;
+          background-color: var(--glass-thick);
+          border: 1px solid var(--glass-border);
+          color: var(--text-primary);
+          font-weight: 600;
       }
       .helper-btn:hover {
-          background-color: #42a5f5;
+          background-color: var(--glass-border);
       }
 
-      /* Honba Control Styles */
       .honba-control {
           display: flex;
           align-items: center;
-          gap: 10px;
-          background: #3d3d3d;
-          border: 1px solid #444;
-          border-radius: 8px;
-          padding: 5px;
+          gap: 12px;
+          background: var(--glass-thick);
+          border: 1px solid var(--glass-border);
+          border-radius: 14px;
+          padding: 6px;
       }
       
       .honba-btn {
-          width: 50px;
+          width: 44px;
+          height: 44px;
           margin-bottom: 0;
-          font-weight: bold;
+          font-weight: 700;
           font-size: 1.2rem;
-          background: #555;
+          background: var(--glass-thick);
+          border: 1px solid var(--glass-border);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
       }
       
       .honba-display {
           flex: 1;
           text-align: center;
-          font-weight: bold;
+          font-weight: 700;
           font-size: 1.1rem;
       }
 
-      /* Fu Calc Button Styles */
       .fu-section-title {
-          font-weight: bold;
-          color: #ccc;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
+          font-weight: 700;
+          color: var(--text-secondary);
+          margin: 24px 0 12px 0;
+          font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
       }
 
       .fu-btn-grid {
           display: flex;
           gap: 8px;
-          margin-bottom: 16px;
-      }
-      
-      .fu-btn-grid.col-3 .fu-btn {
-          width: 33%;
+          margin-bottom: 12px;
       }
 
       .fu-btn {
           flex: 1;
-          background-color: #444;
-          border: 1px solid #555;
-          border-radius: 6px;
-          padding: 10px 5px;
-          color: #fff;
+          background-color: var(--glass-thick);
+          border: 1px solid var(--glass-border);
+          border-radius: 12px;
+          padding: 12px 6px;
+          color: var(--text-primary);
           cursor: pointer;
-          opacity: 0.7;
           font-size: 0.9rem;
-          line-height: 1.2;
+          transition: all 0.2s;
       }
       
       .fu-btn.active {
-          background-color: var(--accent-color);
-          border-color: var(--accent-color);
-          opacity: 1;
-          font-weight: bold;
+          background-color: var(--accent);
+          color: #052e16;
+          border-color: var(--accent);
+          font-weight: 700;
       }
       
       .fu-btn small {
-          font-size: 0.75rem;
-          opacity: 0.8;
-          font-weight: normal;
+          font-size: 0.7rem;
+          opacity: 0.7;
+          display: block;
+          margin-top: 4px;
       }
 
       .fu-table-grid {
           display: grid;
-          grid-template-columns: auto 1fr 1fr;
+          grid-template-columns: 80px 1fr 1fr;
           gap: 8px;
-          margin-bottom: 16px;
-          align-items: stretch;
+          margin-bottom: 24px;
       }
       
       .fu-th {
-          font-size: 0.75rem;
-          color: #aaa;
+          font-size: 0.7rem;
+          color: var(--text-secondary);
           text-align: center;
-          font-weight: normal;
+          font-weight: 600;
           padding-bottom: 4px;
       }
 
@@ -322,63 +418,64 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: #333;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          font-weight: bold;
-          color: #ddd;
-          padding: 4px;
+          background: var(--glass-thick);
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: var(--text-secondary);
+          padding: 8px 4px;
       }
 
       .fu-row-label span {
-          font-size: 0.65rem;
-          color: #888;
-          font-weight: normal;
+          font-size: 0.6rem;
+          opacity: 0.6;
           margin-top: 2px;
       }
 
       .mentsu-btn {
           width: 100%;
-          background-color: #333;
-          border: 1px solid #555;
-          border-radius: 6px;
-          color: #fff;
-          font-size: 1.2rem;
-          font-weight: bold;
+          background-color: var(--glass-thick);
+          border: 1px solid var(--glass-border);
+          border-radius: 12px;
+          color: var(--text-primary);
+          padding: 12px 0;
           cursor: pointer;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          padding: 8px 0;
           position: relative;
           transition: all 0.2s;
       }
 
       .mentsu-btn .fu-badge {
           font-size: 0.65rem;
-          color: #aaa;
+          color: var(--text-secondary);
           margin-top: 4px;
-          font-weight: normal;
-      }
-      
-      .mentsu-btn:hover {
-          background-color: #444;
       }
 
-      .mentsu-btn[data-count="1"],
-      .mentsu-btn[data-count="2"],
-      .mentsu-btn[data-count="3"],
-      .mentsu-btn[data-count="4"] { 
-          background-color: #1e3a5f; 
-          border-color: #4dabf5; 
-          color: #4dabf5; 
+      .mentsu-btn[data-count]:not([data-count="0"]) { 
+          background-color: rgba(74, 222, 128, 0.15); 
+          border-color: var(--accent); 
+          color: var(--accent); 
       }
       
-      .mentsu-btn[data-count]:not([data-count="0"]) .fu-badge {
-          color: #82c4f8;
+      .mentsu-btn .count {
+          font-size: 1.2rem;
+          font-weight: 700;
+      }
+      
+      hr {
+          border: 0;
+          border-top: 1px solid var(--glass-border);
+          margin: 20px 0;
       }
 
+      /* Desktop adjustments */
+      @media (min-width: 480px) {
+        body { padding: 40px 20px; }
+        .modal-overlay { align-items: center; }
+        .modal-content { border-radius: 24px; width: 90%; }
+      }
     </style>
   </head>
   <body>
@@ -448,9 +545,10 @@
         </div>
 
         <div class="result-area" id="result-area">
-            <div>点数</div>
+            <button type="button" class="copy-btn" onclick="copyResult()">📋 Copy</button>
+            <div class="result-label">RESULT</div>
             <div class="result-score" id="score-display">---</div>
-            <div id="score-detail">---</div>
+            <div class="result-detail" id="score-detail">---</div>
         </div>
       </div>
     </div>
@@ -526,7 +624,7 @@
             </div>
 
             <div class="calc-result-preview" id="calc-preview">
-                合計: 30符 (算出: 22)
+                合計: 30符<br><span style="font-size:0.75em; font-weight:normal">算出: 30 (副底 20 + 門前ロン 10)</span>
             </div>
 
             <button type="button" class="primary" onclick="applyFuResult()">符数を反映して閉じる</button>
@@ -645,49 +743,63 @@
 
       function calcFuAssist() {
           let total = 20; // 副底
+          let breakdown = "副底 20";
 
           // 門前加符 / ツモ符
           if (state.isTsumo) {
               total += 2; // ツモ
+              breakdown += " + ツモ 2";
           } else {
               if (fuState.menzen) {
                   total += 10; // メンゼンロン
+                  breakdown += " + 門前ロン 10";
               }
           }
 
           // 雀頭 & 待ち
-          total += fuState.head;
-          total += fuState.wait;
+          let addon = fuState.head + fuState.wait;
+          if (addon > 0) {
+              total += addon;
+              breakdown += ` + 加符 ${addon}`;
+          }
 
           // 面子 (刻子・槓子)
           const m = fuState.mentsu;
-          total += m['kotsu-mo'] * 2;
-          total += m['kotsu-mc'] * 4;
-          total += m['kotsu-yo'] * 4;
-          total += m['kotsu-yc'] * 8;
+          let mentsuFu = 0;
+          mentsuFu += m['kotsu-mo'] * 2;
+          mentsuFu += m['kotsu-mc'] * 4;
+          mentsuFu += m['kotsu-yo'] * 4;
+          mentsuFu += m['kotsu-yc'] * 8;
           
-          total += m['kan-mo'] * 8;
-          total += m['kan-mc'] * 16;
-          total += m['kan-yo'] * 16;
-          total += m['kan-yc'] * 32;
+          mentsuFu += m['kan-mo'] * 8;
+          mentsuFu += m['kan-mc'] * 16;
+          mentsuFu += m['kan-yo'] * 16;
+          mentsuFu += m['kan-yc'] * 32;
+
+          if (mentsuFu > 0) {
+              total += mentsuFu;
+              breakdown += ` + 面子 ${mentsuFu}`;
+          }
 
           // 切り上げ
           let rounded = Math.ceil(total / 10) * 10;
+          let detail = `算出: ${total} (${breakdown})`;
           
           // ピンフツモ例外 (20符)
           // 条件: 22符 (副底20 + ツモ2) のみ
           if (total === 22 && state.isTsumo) {
                rounded = 20; 
-               document.getElementById('calc-preview').innerHTML = `合計: 20符 (ピンフツモ)<br><span style="font-size:0.8em; font-weight:normal">算出: ${total} → 特例20</span>`;
-               document.getElementById('calc-preview').dataset.result = 20;
+               document.getElementById('calc-preview').innerHTML = `合計: 20符 (ピンフツモ)<br><span style="font-size:0.75em; font-weight:normal">${detail} → 特例20</span>`;
           } else {
-               // 鳴きピンフ形 (20符) -> 30符
-              if (rounded === 20 && !state.isTsumo) {
-                  if (total > 20) rounded = 30;
-              }
-               document.getElementById('calc-preview').innerHTML = `合計: ${rounded}符 <span style="font-size:0.8em; font-weight:normal">(算出: ${total})</span>`;
-               document.getElementById('calc-preview').dataset.result = rounded;
+               // ロンは最低30符
+               if (!state.isTsumo && rounded < 30) {
+                   rounded = 30;
+                   document.getElementById('calc-preview').innerHTML = `合計: 30符<br><span style="font-size:0.75em; font-weight:normal">${detail} → 最低30</span>`;
+               } else {
+                   document.getElementById('calc-preview').innerHTML = `合計: ${rounded}符<br><span style="font-size:0.75em; font-weight:normal">${detail}</span>`;
+               }
           }
+          document.getElementById('calc-preview').dataset.result = rounded;
       }
 
       function applyFuResult() {
@@ -821,6 +933,24 @@
           ${scoreText} <span style="font-size: 1rem; font-weight: normal;">${yakushokuDisplay}</span>
         `;
         document.getElementById("score-detail").innerText = paymentText;
+      }
+
+      function copyResult() {
+          const score = document.getElementById('score-display').innerText;
+          const detail = document.getElementById('score-detail').innerText;
+          if (score === "---") return;
+          
+          const text = `${score} (${detail})`;
+          navigator.clipboard.writeText(text).then(() => {
+              const btn = document.querySelector('.copy-btn');
+              const originalText = btn.innerHTML;
+              btn.innerHTML = "✅ Copied!";
+              btn.style.borderColor = "var(--accent)";
+              setTimeout(() => { 
+                  btn.innerHTML = originalText;
+                  btn.style.borderColor = "";
+              }, 2000);
+          });
       }
 
       // Initial render
