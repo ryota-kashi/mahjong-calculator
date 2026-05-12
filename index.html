@@ -21,6 +21,7 @@
       * {
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
 
       body {
@@ -99,10 +100,10 @@
       label {
         display: block;
         margin-bottom: 6px;
-        font-size: 0.62rem;
+        font-size: 0.72rem;
         font-weight: 700;
         color: var(--green);
-        letter-spacing: 0.14em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
       }
 
@@ -161,10 +162,10 @@
       }
 
       .result-label {
-        font-size: 0.6rem;
+        font-size: 0.68rem;
         font-weight: 700;
         color: var(--text-on-green-sub);
-        letter-spacing: 0.15em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
         margin-bottom: 6px;
       }
@@ -231,7 +232,7 @@
 
       .modal-content {
         background: var(--bg);
-        padding: 20px;
+        padding: 14px 14px 20px;
         border-radius: 24px 24px 0 0;
         width: 100%;
         max-width: 480px;
@@ -251,9 +252,36 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 14px;
-        padding-bottom: 12px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
         border-bottom: 1px solid var(--border);
+      }
+
+      .modal-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .modal-reset-btn {
+        background: transparent;
+        border: 1.5px solid var(--border);
+        cursor: pointer;
+        color: var(--text-sub);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.2s;
+      }
+
+      .modal-reset-btn:hover {
+        transform: rotate(180deg);
+        color: var(--green);
+        border-color: var(--green);
       }
 
       .modal-header h2 {
@@ -280,8 +308,8 @@
 
       .calc-result-preview {
         text-align: center;
-        margin: 16px 0;
-        padding: 16px;
+        margin: 10px 0;
+        padding: 10px;
         background: var(--green-light);
         border-radius: 10px;
         border: 1px solid var(--border);
@@ -351,16 +379,24 @@
       .fu-section-title {
         font-weight: 700;
         color: var(--green);
-        margin: 18px 0 8px 0;
-        font-size: 0.62rem;
+        margin: 10px 0 5px 0;
+        font-size: 0.7rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.08em;
+      }
+
+      /* 基本条件 + 待ち を横並び */
+      .fu-row-2col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 4px;
       }
 
       .fu-btn-grid {
         display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
+        gap: 6px;
+        margin-bottom: 8px;
       }
 
       .fu-btn {
@@ -368,10 +404,10 @@
         background: var(--bg-card);
         border: 1.5px solid var(--border);
         border-radius: 8px;
-        padding: 10px 6px;
+        padding: 8px 4px;
         color: var(--text-main);
         cursor: pointer;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         transition: all 0.15s;
         font-family: inherit;
       }
@@ -384,25 +420,25 @@
       }
 
       .fu-btn small {
-        font-size: 0.68rem;
+        font-size: 0.75rem;
         opacity: 0.7;
         display: block;
-        margin-top: 3px;
+        margin-top: 2px;
       }
 
       .fu-table-grid {
         display: grid;
-        grid-template-columns: 80px 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 24px;
+        grid-template-columns: 72px 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 8px;
       }
 
       .fu-th {
-        font-size: 0.68rem;
+        font-size: 0.75rem;
         color: var(--text-sub);
         text-align: center;
         font-weight: 600;
-        padding-bottom: 4px;
+        padding-bottom: 2px;
       }
 
       .fu-row-label {
@@ -415,11 +451,11 @@
         font-size: 0.78rem;
         font-weight: 700;
         color: var(--text-sub);
-        padding: 8px 4px;
+        padding: 6px 4px;
       }
 
       .fu-row-label span {
-        font-size: 0.58rem;
+        font-size: 0.65rem;
         opacity: 0.7;
         margin-top: 2px;
       }
@@ -430,7 +466,7 @@
         border: 1.5px solid var(--border);
         border-radius: 8px;
         color: var(--text-main);
-        padding: 10px 0;
+        padding: 7px 0;
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -441,9 +477,9 @@
       }
 
       .mentsu-btn .fu-badge {
-        font-size: 0.62rem;
+        font-size: 0.7rem;
         color: var(--text-sub);
-        margin-top: 3px;
+        margin-top: 2px;
       }
 
       .mentsu-btn[data-count]:not([data-count="0"]) {
@@ -453,14 +489,14 @@
       }
 
       .mentsu-btn .count {
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
       }
 
       hr {
         border: 0;
         border-top: 1px solid var(--border);
-        margin: 16px 0;
+        margin: 10px 0;
       }
 
       .tsumo-breakdown {
@@ -475,13 +511,13 @@
         justify-content: center;
         align-items: baseline;
         gap: 6px;
-        font-size: 0.82rem;
+        font-size: 0.88rem;
         color: var(--text-on-green-sub);
       }
 
       .tsumo-who {
         font-weight: 700;
-        font-size: 0.72rem;
+        font-size: 0.78rem;
         letter-spacing: 0.05em;
         min-width: 1.5em;
         text-align: right;
@@ -580,28 +616,37 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>符数計算アシスト</h2>
-                <button type="button" class="close-modal-btn" onclick="closeFuModal()">&times;</button>
+                <div class="modal-header-actions">
+                    <button type="button" class="modal-reset-btn" onclick="resetFuState()" title="符数をリセット">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+                    <button type="button" class="close-modal-btn" onclick="closeFuModal()">&times;</button>
+                </div>
             </div>
-            
-            <!-- Fu Calculation Content (Button Style) -->
-            
-            <div class="fu-section-title">基本条件</div>
-            <div class="fu-btn-grid">
-                <button type="button" class="fu-btn active" id="btn-menzen" onclick="toggleMenzen()">門前</button>
-                <button type="button" class="fu-btn" id="btn-naki" onclick="toggleMenzen()">鳴き</button>
+
+            <!-- 基本条件 + 待ち を横並び -->
+            <div class="fu-row-2col">
+                <div>
+                    <div class="fu-section-title">基本条件</div>
+                    <div class="fu-btn-grid">
+                        <button type="button" class="fu-btn active" id="btn-menzen" onclick="toggleMenzen()">門前</button>
+                        <button type="button" class="fu-btn" id="btn-naki" onclick="toggleMenzen()">鳴き</button>
+                    </div>
+                </div>
+                <div>
+                    <div class="fu-section-title">待ち</div>
+                    <div class="fu-btn-grid">
+                        <button type="button" class="fu-btn active" id="btn-wait-0" onclick="setWait(0)">両面<br>シャボ<br><small>0符</small></button>
+                        <button type="button" class="fu-btn" id="btn-wait-2" onclick="setWait(2)">カン<br>ペン<br><small>2符</small></button>
+                    </div>
+                </div>
             </div>
-            
+
             <div class="fu-section-title">雀頭 (アタマ)</div>
-            <div class="fu-btn-grid col-3">
+            <div class="fu-btn-grid">
                 <button type="button" class="fu-btn active" id="btn-head-0" onclick="setHead(0)">数牌<br><small>0符</small></button>
                 <button type="button" class="fu-btn" id="btn-head-2" onclick="setHead(2)">役牌<br><small>2符</small></button>
                 <button type="button" class="fu-btn" id="btn-head-4" onclick="setHead(4)">連風<br><small>4符</small></button>
-            </div>
-
-            <div class="fu-section-title">待ち</div>
-            <div class="fu-btn-grid">
-                <button type="button" class="fu-btn active" id="btn-wait-0" onclick="setWait(0)">両面・シャボ<br><small>0符</small></button>
-                <button type="button" class="fu-btn" id="btn-wait-2" onclick="setWait(2)">カン・ペン・単騎<br><small>2符</small></button>
             </div>
 
             <hr>
@@ -717,6 +762,19 @@
 
       function closeFuModal() {
           document.getElementById('fu-modal').classList.remove('open');
+      }
+
+      function resetFuState() {
+          fuState = {
+              menzen: true,
+              head: 0,
+              wait: 0,
+              mentsu: {
+                  'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
+                  'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
+              }
+          };
+          updateFuUI();
       }
 
       function toggleMenzen() {
