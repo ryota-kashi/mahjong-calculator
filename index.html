@@ -18,6 +18,18 @@
         --text-on-green-sub: rgba(255, 255, 255, 0.55);
       }
 
+      [data-theme="dark"] {
+        --bg: #1a1e1a;
+        --bg-card: #232823;
+        --green: #4a9660;
+        --green-light: #2a3530;
+        --border: #383e38;
+        --text-main: #e4ebe4;
+        --text-sub: #7a8c7a;
+        --text-on-green: #ffffff;
+        --text-on-green-sub: rgba(255, 255, 255, 0.55);
+      }
+
       * {
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
@@ -66,7 +78,14 @@
         margin-bottom: 0;
       }
 
-      .reset-btn {
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .reset-btn,
+      .theme-btn {
         background: transparent;
         border: 1.5px solid var(--border);
         cursor: pointer;
@@ -86,6 +105,11 @@
         color: var(--green);
         border-color: var(--green);
         background: transparent;
+      }
+
+      .theme-btn:hover {
+        color: var(--green);
+        border-color: var(--green);
       }
 
       .control-group {
@@ -539,9 +563,15 @@
     <div class="container">
       <div class="header-row">
         <h1>🀄 点数計算機</h1>
-        <button type="button" class="reset-btn" onclick="resetAll()" title="すべてリセット">
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="ダークモード切替">
+            <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+          <button type="button" class="reset-btn" onclick="resetAll()" title="すべてリセット">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        </button>
+          </button>
+        </div>
       </div>
       
       <div id="app">
@@ -699,6 +729,27 @@
     </div>
 
     <script>
+      // テーマ
+      function applyTheme(dark) {
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+          document.getElementById('icon-moon').style.display = dark ? 'none' : '';
+          document.getElementById('icon-sun').style.display = dark ? '' : 'none';
+      }
+
+      function toggleTheme() {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          const next = !isDark;
+          applyTheme(next);
+          localStorage.setItem('theme', next ? 'dark' : 'light');
+      }
+
+      // 起動時に保存済みテーマを適用
+      (function () {
+          const saved = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          applyTheme(saved ? saved === 'dark' : prefersDark);
+      })();
+
       // State
       let state = {
           isDealer: false, // false = 子, true = 親
