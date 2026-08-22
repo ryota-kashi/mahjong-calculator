@@ -557,6 +557,72 @@
         .modal-overlay { align-items: center; }
         .modal-content { border-radius: 16px; width: 90%; }
       }
+
+      /* --- 追加: 注意書き・状態表示・無効化 --- */
+      .hint {
+        font-size: 0.75rem;
+        line-height: 1.45;
+        color: var(--green);
+        margin-top: 6px;
+      }
+
+      .fu-btn:disabled,
+      .mentsu-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      select:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .helper-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .fu-state-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        background: var(--green-light);
+        border-radius: 8px;
+        padding: 7px 10px;
+        margin-bottom: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-sub);
+      }
+
+      .fu-warn {
+        font-size: 0.72rem;
+        line-height: 1.55;
+        color: var(--text-sub);
+        background: var(--green-light);
+        border-radius: 8px;
+        padding: 7px 9px;
+        margin: 8px 0;
+      }
+
+      .fu-note {
+        font-size: 0.7rem;
+        color: var(--text-sub);
+        text-align: right;
+        margin: -4px 0 6px 0;
+      }
+
+      .calc-sub {
+        font-size: 0.75em;
+        font-weight: normal;
+      }
+
+      .honba-note {
+        font-size: 0.75rem;
+        opacity: 0.75;
+        margin-top: 6px;
+      }
     </style>
   </head>
   <body>
@@ -593,7 +659,7 @@
 
         <div class="control-group">
             <label>翻数 (ハン)</label>
-            <select id="han-select" onchange="calculateScore()">
+            <select id="han-select" onchange="onHanChange()">
                 <option value="1">1翻</option>
                 <option value="2">2翻</option>
                 <option value="3">3翻</option>
@@ -608,9 +674,9 @@
 
         <div class="control-group">
             <label>符数 (フ)</label>
-            <select id="fu-select" onchange="calculateScore()">
-                <option value="20">20符 (ピンフツモ)</option>
-                <option value="25">25符 (チートイ)</option>
+            <select id="fu-select" onchange="onFuChange()">
+                <option value="20">20符 (平和ツモ)</option>
+                <option value="25">25符 (七対子)</option>
                 <option value="30" selected>30符</option>
                 <option value="40">40符</option>
                 <option value="50">50符</option>
@@ -621,7 +687,8 @@
                 <option value="100">100符</option>
                 <option value="110">110符</option>
             </select>
-            <button type="button" class="helper-btn" onclick="openFuModal()">符数計算アシスト</button>
+            <div class="hint" id="fu-hint" style="display:none"></div>
+            <button type="button" class="helper-btn" id="fu-assist-btn" onclick="openFuModal()">符数計算アシスト</button>
         </div>
 
         <div class="control-group">
@@ -633,7 +700,7 @@
             </div>
         </div>
 
-        <div class="result-area" id="result-area">
+        <div class="result-area" id="result-area" aria-live="polite">
             <div class="result-label">点数</div>
             <div class="result-score" id="score-display">---</div>
             <div class="result-detail" id="score-detail">---</div>
@@ -642,10 +709,10 @@
     </div>
 
     <!-- Fu Calculation Modal -->
-    <div class="modal-overlay" id="fu-modal">
-        <div class="modal-content">
+    <div class="modal-overlay" id="fu-modal" onclick="onOverlayClick(event)">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="fu-modal-title">
             <div class="modal-header">
-                <h2>符数計算アシスト</h2>
+                <h2 id="fu-modal-title">符数計算アシスト</h2>
                 <div class="modal-header-actions">
                     <button type="button" class="modal-reset-btn" onclick="resetFuState()" title="符数をリセット">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -654,39 +721,58 @@
                 </div>
             </div>
 
-            <!-- 基本条件 + 待ち を横並び -->
+            <!-- 本体と同期している条件 -->
+            <div class="fu-state-bar">
+                <span id="fu-current-cond">子・ロン</span>
+                <span id="fu-current-fu">適用中: 30符</span>
+            </div>
+
+            <!-- 基本条件 + アガリ方 を横並び -->
             <div class="fu-row-2col">
                 <div>
                     <div class="fu-section-title">基本条件</div>
                     <div class="fu-btn-grid">
-                        <button type="button" class="fu-btn active" id="btn-menzen" onclick="toggleMenzen()">門前</button>
-                        <button type="button" class="fu-btn" id="btn-naki" onclick="toggleMenzen()">鳴き</button>
+                        <button type="button" class="fu-btn active" id="btn-menzen" onclick="setMenzen(true)">門前</button>
+                        <button type="button" class="fu-btn" id="btn-naki" onclick="setMenzen(false)">鳴き</button>
                     </div>
                 </div>
                 <div>
-                    <div class="fu-section-title">待ち</div>
+                    <div class="fu-section-title">アガリ方</div>
                     <div class="fu-btn-grid">
-                        <button type="button" class="fu-btn active" id="btn-wait-0" onclick="setWait(0)">両面<br>シャボ<br><small>0符</small></button>
-                        <button type="button" class="fu-btn" id="btn-wait-2" onclick="setWait(2)">カン<br>ペン<br><small>2符</small></button>
+                        <button type="button" class="fu-btn active" id="btn-fu-ron" onclick="setWinType('ron')">ロン</button>
+                        <button type="button" class="fu-btn" id="btn-fu-tsumo" onclick="setWinType('tsumo')">ツモ</button>
                     </div>
                 </div>
+            </div>
+
+            <div class="fu-section-title">特殊形</div>
+            <div class="fu-btn-grid">
+                <button type="button" class="fu-btn" id="btn-chiitoi" onclick="toggleChiitoi()">七対子<small>25符固定</small></button>
+            </div>
+
+            <div class="fu-section-title">待ち</div>
+            <div class="fu-btn-grid">
+                <button type="button" class="fu-btn active" id="btn-wait-ryanmen" onclick="setWait('ryanmen')">両面<br><small>0符</small></button>
+                <button type="button" class="fu-btn" id="btn-wait-shanpon" onclick="setWait('shanpon')">シャボ<br><small>0符</small></button>
+                <button type="button" class="fu-btn" id="btn-wait-other" onclick="setWait('other')">カンチャン<br>ペンチャン・単騎<br><small>2符</small></button>
             </div>
 
             <div class="fu-section-title">雀頭 (アタマ)</div>
             <div class="fu-btn-grid">
-                <button type="button" class="fu-btn active" id="btn-head-0" onclick="setHead(0)">数牌<br><small>0符</small></button>
-                <button type="button" class="fu-btn" id="btn-head-2" onclick="setHead(2)">役牌<br><small>2符</small></button>
-                <button type="button" class="fu-btn" id="btn-head-4" onclick="setHead(4)">連風<br><small>4符</small></button>
+                <button type="button" class="fu-btn active" id="btn-head-0" onclick="setHead(0)">数牌・客風<br><small>0符</small></button>
+                <button type="button" class="fu-btn" id="btn-head-2" onclick="setHead(2)">役牌<br><small>三元/自風/場風 2符</small></button>
+                <button type="button" class="fu-btn" id="btn-head-4" onclick="setHead(4)">連風牌<br><small>4符</small></button>
             </div>
 
             <hr>
             <div class="fu-section-title">面子 (タップで個数追加)</div>
-            
+            <div class="fu-note" id="mentsu-remain">0 / 4 面子</div>
+
             <div class="fu-table-grid">
                 <div class="fu-th">種類</div>
                 <div class="fu-th">2〜8<br><span style="font-size:0.6rem">(中張牌)</span></div>
                 <div class="fu-th">1・9・字<br><span style="font-size:0.6rem">(幺九牌)</span></div>
-                
+
                 <div class="fu-row-label">ポン<span>明刻</span></div>
                 <button type="button" class="mentsu-btn" id="btn-kotsu-mo" onclick="addMentsu('kotsu-mo')">
                     <span class="count">0</span><div class="fu-badge">2符</div>
@@ -720,16 +806,16 @@
                 </button>
             </div>
 
-            <div class="calc-result-preview" id="calc-preview">
-                合計: 30符<br><span style="font-size:0.75em; font-weight:normal">算出: 30 (副底 20 + 門前ロン 10)</span>
-            </div>
+            <div class="fu-warn" id="fu-warn" style="display:none"></div>
+
+            <div class="calc-result-preview" id="calc-preview">合計: 30符</div>
 
             <button type="button" class="primary" onclick="applyFuResult()">符数を反映して閉じる</button>
         </div>
     </div>
 
     <script>
-      // テーマ
+      // ===================== テーマ =====================
       function applyTheme(dark) {
           document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
           document.getElementById('icon-moon').style.display = dark ? 'none' : '';
@@ -740,73 +826,329 @@
           const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
           const next = !isDark;
           applyTheme(next);
-          localStorage.setItem('theme', next ? 'dark' : 'light');
+          try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch (e) { /* ストレージ不可でも動作継続 */ }
       }
 
-      // 起動時に保存済みテーマを適用
+      // 起動時に保存済みテーマを適用（localStorage が使えない環境でも落とさない）
       (function () {
-          const saved = localStorage.getItem('theme');
+          let saved = null;
+          try { saved = localStorage.getItem('theme'); } catch (e) { saved = null; }
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           applyTheme(saved ? saved === 'dark' : prefersDark);
       })();
 
-      // State
-      let state = {
-          isDealer: false, // false = 子, true = 親
-          isTsumo: false,  // false = ロン, true = ツモ
-          han: 1,
-          fu: 30,
-          honba: 0
+      // ===================== 定数 =====================
+      // 面子の符（id の 1文字目 m=中張牌 / y=幺九牌、2文字目 o=明 / c=暗）
+      const MENTSU_FU = {
+          'kotsu-mo': 2,  'kotsu-yo': 4,   // 明刻（ポン）
+          'kotsu-mc': 4,  'kotsu-yc': 8,   // 暗刻
+          'kan-mo': 8,    'kan-yo': 16,    // 明槓
+          'kan-mc': 16,   'kan-yc': 32     // 暗槓
       };
+      const OPEN_KOTSU_KEYS = ['kotsu-mo', 'kotsu-yo'];
+      const OPEN_KAN_KEYS = ['kan-mo', 'kan-yo'];
+      const WAIT_FU = { ryanmen: 0, shanpon: 0, other: 2 };
+      const WAIT_KEYS = ['ryanmen', 'shanpon', 'other'];
+      const HEAD_KEYS = [0, 2, 4];
 
-      // Fu Calc State
-      let fuState = {
-          menzen: true,
-          head: 0,
-          wait: 0,
-          mentsu: {
-              'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
-              'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
-          }
-      };
-      
-      function resetAll() {
-          state = {
+      function initialState() {
+          return {
               isDealer: false, // false = 子, true = 親
               isTsumo: false,  // false = ロン, true = ツモ
               han: 1,
               fu: 30,
               honba: 0
           };
-          fuState = {
+      }
+
+      function initialFuState() {
+          return {
               menzen: true,
+              chiitoi: false,
               head: 0,
-              wait: 0,
+              wait: 'ryanmen',
               mentsu: {
                   'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
                   'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
-              }
+              },
+              applied: false // アシストで確定した符かどうか
           };
-          
-          document.getElementById('han-select').value = "1";
-          document.getElementById('fu-select').value = "30";
-          document.getElementById('honba-display').innerText = "0本場";
-          
-          updateToggleUI();
+      }
+
+      let state = initialState();
+      let fuState = initialFuState();
+
+      // ===================== 点数の中核ロジック =====================
+      // 基本点。5翻以上は符を参照しない。4翻以下は 符 × 2^(2+翻)、2000超で満貫打ち切り。
+      function basePointsOf(han, fu) {
+          if (han >= 13) return 8000; // 役満
+          if (han >= 11) return 6000; // 三倍満
+          if (han >= 8) return 4000;  // 倍満
+          if (han >= 6) return 3000;  // 跳満
+          if (han >= 5) return 2000;  // 満貫
+          const b = fu * Math.pow(2, 2 + han);
+          return b > 2000 ? 2000 : b; // 切り上げ満貫は採用しない（30符4翻=1920 → 7700）
+      }
+
+      // 役職名は金額から逆算せず、翻と符から直接判定する
+      function rankNameOf(han, fu) {
+          if (han >= 13) return '役満';
+          if (han >= 11) return '三倍満';
+          if (han >= 8) return '倍満';
+          if (han >= 6) return '跳満';
+          if (han >= 5) return '満貫';
+          return fu * Math.pow(2, 2 + han) > 2000 ? '満貫' : '';
+      }
+
+      const ceil100 = (num) => Math.ceil(num / 100) * 100;
+
+      // ===================== 翻数と符の整合 =====================
+      // 成立しない組み合わせの理由を返す（成立するなら空文字）
+      function fuInvalidReason(fu, han, isTsumo) {
+          if (han >= 5) return ''; // 符は点数に影響しない
+          if (fu === 20) {
+              if (!isTsumo) return '20符はロンでは成立しません';
+              if (han < 2) return '平和ツモは最低2翻です';
+          }
+          if (fu === 25 && han < 2) return '七対子は最低2翻です';
+          return '';
+      }
+
+      function syncFuOptions() {
+          const select = document.getElementById('fu-select');
+          const hint = document.getElementById('fu-hint');
+          const assistBtn = document.getElementById('fu-assist-btn');
+          const manganUp = state.han >= 5;
+
+          select.disabled = manganUp;
+          assistBtn.disabled = manganUp;
+
+          for (const opt of select.options) {
+              opt.disabled = !manganUp && fuInvalidReason(parseInt(opt.value), state.han, state.isTsumo) !== '';
+          }
+
+          let msg = '';
+          if (manganUp) {
+              msg = '5翻以上のため、符は点数に影響しません。';
+          } else {
+              const cur = select.options[select.selectedIndex];
+              if (cur && cur.disabled) {
+                  const reason = fuInvalidReason(parseInt(cur.value), state.han, state.isTsumo);
+                  msg = `${cur.value}符は選べません（${reason}）。30符に変更しました。`;
+                  select.value = '30';
+              }
+          }
+
+          hint.textContent = msg;
+          hint.style.display = msg ? '' : 'none';
+          state.fu = parseInt(select.value);
+      }
+
+      // ===================== 符計算アシスト =====================
+      function totalMentsuCount() {
+          return Object.keys(MENTSU_FU).reduce((a, k) => a + fuState.mentsu[k], 0);
+      }
+
+      function openKotsuCount() {
+          return OPEN_KOTSU_KEYS.reduce((a, k) => a + fuState.mentsu[k], 0);
+      }
+
+      function openKanCount() {
+          return OPEN_KAN_KEYS.reduce((a, k) => a + fuState.mentsu[k], 0);
+      }
+
+      // 門前が成立しうるか。明槓は必ず門前を破る。
+      // 明刻は「ロンのシャボ待ちで和了牌が完成させた刻子」1つだけ門前と両立する。
+      function menzenAllowed() {
+          if (openKanCount() > 0) return false;
+          const ok = openKotsuCount();
+          if (ok === 0) return true;
+          return ok === 1 && !state.isTsumo;
+      }
+
+      // 符を算出する。戻り値は { fu, breakdown, note }
+      function computeFu() {
+          if (fuState.chiitoi) {
+              return { fu: 25, breakdown: '七対子 25符固定', note: '' };
+          }
+
+          const parts = ['副底 20'];
+          let total = 20;
+
+          if (state.isTsumo) {
+              total += 2;
+              parts.push('ツモ 2');
+          } else if (fuState.menzen) {
+              total += 10;
+              parts.push('門前ロン 10');
+          }
+
+          if (fuState.head > 0) {
+              total += fuState.head;
+              parts.push(`雀頭 ${fuState.head}`);
+          }
+
+          const waitFu = WAIT_FU[fuState.wait];
+          if (waitFu > 0) {
+              total += waitFu;
+              parts.push(`待ち ${waitFu}`);
+          }
+
+          let mentsuFu = 0;
+          for (const key in MENTSU_FU) {
+              mentsuFu += fuState.mentsu[key] * MENTSU_FU[key];
+          }
+          if (mentsuFu > 0) {
+              total += mentsuFu;
+              parts.push(`面子 ${mentsuFu}`);
+          }
+
+          let fu = Math.ceil(total / 10) * 10;
+          let note = '';
+
+          // 平和形（門前・両面待ち・雀頭0符・面子符なし）
+          const isPinfuShape = fuState.menzen && mentsuFu === 0 && fuState.head === 0 && fuState.wait === 'ryanmen';
+
+          if (state.isTsumo && isPinfuShape) {
+              fu = 20;
+              note = '平和ツモの特例で20符';
+          } else if (!state.isTsumo && fu < 30) {
+              // 喰い平和形のロンなど。20符ロンは存在しないので30符。
+              fu = 30;
+              note = '20符ロンは無いため最低30符';
+          }
+
+          if (fu > 110) {
+              fu = 110;
+              note = '上限の110符に丸めました（入力ミスの可能性があります）';
+          }
+
+          return { fu: fu, breakdown: parts.join(' + ') + ` = ${total}`, note: note };
+      }
+
+      // ===================== 符アシストの操作 =====================
+      function setMenzen(value) {
+          if (fuState.chiitoi) return;
+          if (value && !menzenAllowed()) return;
+          fuState.menzen = value;
+          updateFuUI();
+      }
+
+      function toggleChiitoi() {
+          fuState.chiitoi = !fuState.chiitoi;
+          updateFuUI();
+      }
+
+      function setHead(val) {
+          if (fuState.chiitoi) return;
+          fuState.head = val;
+          updateFuUI();
+      }
+
+      function setWait(val) {
+          if (fuState.chiitoi) return;
+          fuState.wait = val;
+          updateFuUI();
+      }
+
+      // 刻子・槓子の合計は雀頭を除いて4つまで。上限に達したら0に戻す（誤タップの復帰用）。
+      function addMentsu(key) {
+          if (fuState.chiitoi) return;
+          const current = fuState.mentsu[key];
+          const others = totalMentsuCount() - current;
+          const max = 4 - others;
+          fuState.mentsu[key] = current >= max ? 0 : current + 1;
+          updateFuUI();
+      }
+
+      function setFuBtn(id, active, disabled) {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.className = active ? 'fu-btn active' : 'fu-btn';
+          el.disabled = !!disabled;
+      }
+
+      function updateFuUI() {
+          // 明刻・明槓と門前の整合を強制する
+          if (!menzenAllowed()) fuState.menzen = false;
+
+          const chii = fuState.chiitoi;
+
+          setFuBtn('btn-chiitoi', chii, false);
+          setFuBtn('btn-menzen', fuState.menzen && !chii, chii || !menzenAllowed());
+          setFuBtn('btn-naki', !fuState.menzen && !chii, chii);
+          setFuBtn('btn-fu-ron', !state.isTsumo, false);
+          setFuBtn('btn-fu-tsumo', state.isTsumo, false);
+
+          WAIT_KEYS.forEach((w) => setFuBtn('btn-wait-' + w, !chii && fuState.wait === w, chii));
+          HEAD_KEYS.forEach((h) => setFuBtn('btn-head-' + h, !chii && fuState.head === h, chii));
+
+          for (const key in MENTSU_FU) {
+              const btn = document.getElementById('btn-' + key);
+              if (!btn) continue;
+              const countSpan = btn.querySelector('.count');
+              if (countSpan) countSpan.innerText = fuState.mentsu[key];
+              btn.setAttribute('data-count', chii ? 0 : fuState.mentsu[key]);
+              btn.disabled = chii;
+          }
+
+          document.getElementById('fu-current-cond').innerText =
+              `${state.isDealer ? '親' : '子'}・${state.isTsumo ? 'ツモ' : 'ロン'}`;
+          document.getElementById('fu-current-fu').innerText = `適用中: ${state.fu}符`;
+
+          const used = totalMentsuCount();
+          document.getElementById('mentsu-remain').innerText = chii ? '入力不要' : `${used} / 4 面子`;
+
+          // 注意書き
+          const warns = [];
+          if (chii) {
+              warns.push('七対子は25符固定です。門前ロン10符・ツモ2符・待ち符は加算しません。');
+          } else {
+              if (!menzenAllowed()) {
+                  warns.push('明カン、または明刻が2つ以上あるため「鳴き」で固定されます（門前ロンの10符は付きません）。');
+              }
+              if (fuState.menzen && !state.isTsumo && openKotsuCount() === 1) {
+                  warns.push('門前ロンのシャボ待ちで完成した刻子1つだけは明刻扱いです。門前ロンの10符は維持されます。');
+              }
+              if (fuState.wait === 'shanpon' && !state.isTsumo && openKotsuCount() === 0) {
+                  warns.push('シャボ待ちのロンでは、和了牌で完成した刻子は暗刻ではなく「ポン(明刻)」として数えます。');
+              }
+              if (used >= 4) {
+                  warns.push('面子は雀頭を除いて4つまでです。これ以上は追加できません。');
+              }
+          }
+          const warnEl = document.getElementById('fu-warn');
+          warnEl.innerHTML = warns.map((w) => '・' + w).join('<br>');
+          warnEl.style.display = warns.length ? '' : 'none';
+
+          // プレビュー
+          const r = computeFu();
+          document.getElementById('calc-preview').innerHTML =
+              `合計: ${r.fu}符<br><span class="calc-sub">${r.breakdown}${r.note ? ' → ' + r.note : ''}</span>`;
+      }
+
+      function applyFuResult() {
+          const r = computeFu();
+          document.getElementById('fu-select').value = String(r.fu);
+          state.fu = r.fu;
+          fuState.applied = true;
+          syncFuOptions(); // 翻数との整合（20符×1翻など）をここで弾く
           updateFuUI();
           calculateScore();
+          closeFuModal();
       }
 
-      function updateHonba(delta) {
-          let newVal = state.honba + delta;
-          if (newVal < 0) newVal = 0;
-          state.honba = newVal;
-          document.getElementById('honba-display').innerText = `${state.honba}本場`;
-          calculateScore();
+      // アガリ方を変えたとき、アシストで確定した符を追従させる
+      function reapplyAssistFu() {
+          if (!fuState.applied) return;
+          const r = computeFu();
+          document.getElementById('fu-select').value = String(r.fu);
+          state.fu = r.fu;
       }
 
-      // Modal Functions
+      // ===================== モーダル =====================
       function openFuModal() {
+          if (state.han >= 5) return;
           document.getElementById('fu-modal').classList.add('open');
           updateFuUI();
       }
@@ -815,259 +1157,133 @@
           document.getElementById('fu-modal').classList.remove('open');
       }
 
+      function onOverlayClick(event) {
+          if (event.target === document.getElementById('fu-modal')) closeFuModal();
+      }
+
+      document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeFuModal();
+      });
+
       function resetFuState() {
-          fuState = {
-              menzen: true,
-              head: 0,
-              wait: 0,
-              mentsu: {
-                  'kotsu-mo': 0, 'kotsu-mc': 0, 'kotsu-yo': 0, 'kotsu-yc': 0,
-                  'kan-mo': 0, 'kan-mc': 0, 'kan-yo': 0, 'kan-yc': 0
-              }
-          };
+          fuState = initialFuState();
           updateFuUI();
       }
 
-      function toggleMenzen() {
-          fuState.menzen = !fuState.menzen;
+      // ===================== 本体の操作 =====================
+      function resetAll() {
+          state = initialState();
+          fuState = initialFuState();
+
+          document.getElementById('han-select').value = '1';
+          document.getElementById('fu-select').value = '30';
+          document.getElementById('honba-display').innerText = '0本場';
+
+          updateToggleUI();
+          syncFuOptions();
           updateFuUI();
-      }
-
-      function setHead(val) {
-          fuState.head = val;
-          updateFuUI();
-      }
-
-      function setWait(val) {
-          fuState.wait = val;
-          updateFuUI();
-      }
-
-      function addMentsu(key) {
-          fuState.mentsu[key] = (fuState.mentsu[key] + 1) % 5; // Cycle 0-4
-          updateFuUI();
-      }
-
-      function updateFuUI() {
-          // Update Buttons
-          document.getElementById('btn-menzen').className = fuState.menzen ? 'fu-btn active' : 'fu-btn';
-          document.getElementById('btn-naki').className = !fuState.menzen ? 'fu-btn active' : 'fu-btn';
-
-          document.getElementById('btn-head-0').className = fuState.head === 0 ? 'fu-btn active' : 'fu-btn';
-          document.getElementById('btn-head-2').className = fuState.head === 2 ? 'fu-btn active' : 'fu-btn';
-          document.getElementById('btn-head-4').className = fuState.head === 4 ? 'fu-btn active' : 'fu-btn';
-
-          document.getElementById('btn-wait-0').className = fuState.wait === 0 ? 'fu-btn active' : 'fu-btn';
-          document.getElementById('btn-wait-2').className = fuState.wait === 2 ? 'fu-btn active' : 'fu-btn';
-
-          for (const key in fuState.mentsu) {
-              const btn = document.getElementById(`btn-${key}`);
-              if (btn) {
-                  const countSpan = btn.querySelector('.count');
-                  if (countSpan) countSpan.innerText = fuState.mentsu[key];
-                  btn.setAttribute('data-count', fuState.mentsu[key]);
-              }
-          }
-
-          calcFuAssist();
-      }
-
-      function calcFuAssist() {
-          let total = 20; // 副底
-          let breakdown = "副底 20";
-
-          // 門前加符 / ツモ符
-          if (state.isTsumo) {
-              total += 2; // ツモ
-              breakdown += " + ツモ 2";
-          } else {
-              if (fuState.menzen) {
-                  total += 10; // メンゼンロン
-                  breakdown += " + 門前ロン 10";
-              }
-          }
-
-          // 雀頭 & 待ち
-          let addon = fuState.head + fuState.wait;
-          if (addon > 0) {
-              total += addon;
-              breakdown += ` + 加符 ${addon}`;
-          }
-
-          // 面子 (刻子・槓子)
-          const m = fuState.mentsu;
-          let mentsuFu = 0;
-          mentsuFu += m['kotsu-mo'] * 2;
-          mentsuFu += m['kotsu-mc'] * 4;
-          mentsuFu += m['kotsu-yo'] * 4;
-          mentsuFu += m['kotsu-yc'] * 8;
-          
-          mentsuFu += m['kan-mo'] * 8;
-          mentsuFu += m['kan-mc'] * 16;
-          mentsuFu += m['kan-yo'] * 16;
-          mentsuFu += m['kan-yc'] * 32;
-
-          if (mentsuFu > 0) {
-              total += mentsuFu;
-              breakdown += ` + 面子 ${mentsuFu}`;
-          }
-
-          // 切り上げ
-          let rounded = Math.ceil(total / 10) * 10;
-          let detail = `算出: ${total} (${breakdown})`;
-          
-          // ピンフツモ例外 (20符)
-          // 条件: 22符 (副底20 + ツモ2) のみ
-          if (total === 22 && state.isTsumo) {
-               rounded = 20; 
-               document.getElementById('calc-preview').innerHTML = `合計: 20符 (ピンフツモ)<br><span style="font-size:0.75em; font-weight:normal">${detail} → 特例20</span>`;
-          } else {
-               // ロンは最低30符
-               if (!state.isTsumo && rounded < 30) {
-                   rounded = 30;
-                   document.getElementById('calc-preview').innerHTML = `合計: 30符<br><span style="font-size:0.75em; font-weight:normal">${detail} → 最低30</span>`;
-               } else {
-                   document.getElementById('calc-preview').innerHTML = `合計: ${rounded}符<br><span style="font-size:0.75em; font-weight:normal">${detail}</span>`;
-               }
-          }
-          document.getElementById('calc-preview').dataset.result = rounded;
-      }
-
-      function applyFuResult() {
-          const result = parseInt(document.getElementById('calc-preview').dataset.result);
-          
-          // Select the closest option in the dropdown
-          const select = document.getElementById('fu-select');
-          
-          // Find option
-          let found = false;
-          for (let i = 0; i < select.options.length; i++) {
-              if (parseInt(select.options[i].value) === result) {
-                  select.selectedIndex = i;
-                  found = true;
-                  break;
-              }
-          }
-          
-          if (!found) {
-              // If not found (e.g. > 110 or weird number), select nearest or max
-              if (result > 110) select.value = "110";
-              else if (result < 20) select.value = "20";
-              else {
-                  // Fallback to 30 or whatever
-                  select.value = "30"; 
-              }
-          }
-          
           calculateScore();
-          closeFuModal();
+      }
+
+      function updateHonba(delta) {
+          state.honba = Math.max(0, Math.min(99, state.honba + delta));
+          document.getElementById('honba-display').innerText = `${state.honba}本場`;
+          calculateScore();
+      }
+
+      function onHanChange() {
+          state.han = parseInt(document.getElementById('han-select').value);
+          syncFuOptions();
+          updateFuUI();
+          calculateScore();
+      }
+
+      function onFuChange() {
+          state.fu = parseInt(document.getElementById('fu-select').value);
+          fuState.applied = false; // 手動で選んだらアシスト追従を解除
+          updateFuUI();
+          calculateScore();
       }
 
       function setWind(wind) {
           state.isDealer = (wind === 'east');
           updateToggleUI();
+          updateFuUI();
           calculateScore();
       }
 
       function setWinType(type) {
           state.isTsumo = (type === 'tsumo');
-          // Sync removed: disabled select in modal is no longer there
-          
           updateToggleUI();
+          updateFuUI();      // ロン(+10)とツモ(+2)で符が変わるため再計算
+          reapplyAssistFu(); // アシスト確定済みなら符も追従させる
+          syncFuOptions();   // 20符ロンなどをここで弾く
+          updateFuUI();
           calculateScore();
       }
 
       function updateToggleUI() {
           document.getElementById('btn-wind-east').className = state.isDealer ? 'toggle-btn active' : 'toggle-btn';
           document.getElementById('btn-wind-south').className = !state.isDealer ? 'toggle-btn active' : 'toggle-btn';
-          
+
           document.getElementById('btn-win-tsumo').className = state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
           document.getElementById('btn-win-ron').className = !state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
       }
 
+      // ===================== 点数表示 =====================
       function calculateScore() {
-        const han = parseInt(document.getElementById("han-select").value);
-        const fu = parseInt(document.getElementById("fu-select").value);
+        const han = state.han;
+        const fu = state.fu;
 
-        state.han = han;
-        state.fu = fu;
+        const basePoints = basePointsOf(han, fu);
+        const yakushoku = rankNameOf(han, fu);
 
-        let basePoints = 0;
-        let scoreText = "";
-        let paymentText = "";
-        let yakushoku = "";
-
-        // 1. 基礎点の算出
-        if (han >= 5) {
-          if (han >= 13) basePoints = 8000;       // 役満
-          else if (han >= 11) basePoints = 6000;  // 三倍満
-          else if (han >= 8) basePoints = 4000;   // 倍満
-          else if (han >= 6) basePoints = 3000;   // 跳満
-          else basePoints = 2000;                 // 満貫
-        } else {
-          // 符計算: 符 * 2^(2+翻)
-          basePoints = fu * Math.pow(2, 2 + han);
-
-          // 満貫切り上げチェック
-          if (basePoints > 2000) {
-            basePoints = 2000;
-          }
-        }
-
-        // 役職名の決定 (満貫以上の場合)
-        if (basePoints === 8000) yakushoku = "役満";
-        else if (basePoints === 6000) yakushoku = "三倍満";
-        else if (basePoints === 4000) yakushoku = "倍満";
-        else if (basePoints === 3000) yakushoku = "跳満";
-        else if (basePoints === 2000) yakushoku = "満貫";
-
-        // 2. 支払い額の計算 (100点単位切り上げ) + 本場加算
-        const ceil100 = (num) => Math.ceil(num / 100) * 100;
-        const honbaPoints = state.honba * 300; // Total added to score in Ron
-        const honbaPay = state.honba * 100;    // Added to each payment in Tsumo
+        const honbaPoints = state.honba * 300; // ロン: 放銃者が総額に加算
+        const honbaPay = state.honba * 100;    // ツモ: 各家の支払いに加算
 
         let totalScore = 0;
+        let paymentText = '';
 
-        if (state.isDealer) { // 親の場合
+        if (state.isDealer) { // 親
           if (state.isTsumo) {
-            // 親のツモ: オール (基礎点 * 2) + 本場(100点)
-            const payment = ceil100(basePoints * 2);
-            const finalPayment = payment + honbaPay;
-            totalScore = finalPayment * 3;
-            scoreText = `${totalScore.toLocaleString()}点`;
-            paymentText = `${finalPayment.toLocaleString()}点オール`;
+            // 親のツモ: 全員が (基礎点 × 2) を支払う + 本場100点ずつ
+            const payment = ceil100(basePoints * 2) + honbaPay;
+            totalScore = payment * 3;
+            paymentText = `${payment.toLocaleString()}点オール`;
           } else {
-            // 親のロン: (基礎点 * 6) + 本場(300点)
+            // 親のロン: 基礎点 × 6 + 本場300点
             totalScore = ceil100(basePoints * 6) + honbaPoints;
-            scoreText = `${totalScore.toLocaleString()}点`;
-            paymentText = "ロン";
+            paymentText = 'ロン';
           }
-        } else { // 子の場合
+        } else { // 子
           if (state.isTsumo) {
-            // 子のツモ: 親(基礎点 * 2), 子(基礎点 * 1) + 本場(100点ずつ)
+            // 子のツモ: 親が 基礎点 × 2、子が 基礎点 × 1 + 本場100点ずつ
             const dealerPay = ceil100(basePoints * 2) + honbaPay;
             const childPay = ceil100(basePoints) + honbaPay;
             totalScore = dealerPay + (childPay * 2);
-            scoreText = `${totalScore.toLocaleString()}点`;
             paymentText = `<div class="tsumo-breakdown"><div class="tsumo-row"><span class="tsumo-who">子</span><span class="tsumo-amt">${childPay.toLocaleString()}点</span></div><div class="tsumo-row"><span class="tsumo-who">親</span><span class="tsumo-amt">${dealerPay.toLocaleString()}点</span></div></div>`;
           } else {
-            // 子のロン: (基礎点 * 4) + 本場(300点)
+            // 子のロン: 基礎点 × 4 + 本場300点
             totalScore = ceil100(basePoints * 4) + honbaPoints;
-            scoreText = `${totalScore.toLocaleString()}点`;
-            paymentText = "ロン";
+            paymentText = 'ロン';
           }
         }
 
-         // UI更新
-        const yakushokuDisplay = yakushoku ? `(${yakushoku})` : "";
-        document.getElementById("score-display").innerHTML = `
-          ${scoreText} <span style="font-size: 1rem; font-weight: normal;">${yakushokuDisplay}</span>
-        `;
-        document.getElementById("score-detail").innerHTML = paymentText;
+        if (state.honba > 0) {
+          paymentText += `<div class="honba-note">${state.honba}本場 +${honbaPoints.toLocaleString()}点 を含む</div>`;
+        }
+
+        const yakushokuDisplay = yakushoku ? ` <span style="font-size: 1rem; font-weight: normal;">(${yakushoku})</span>` : '';
+        document.getElementById('score-display').innerHTML = `${totalScore.toLocaleString()}点${yakushokuDisplay}`;
+        document.getElementById('score-detail').innerHTML = paymentText;
       }
 
-      // Initial render
+      // ===================== 初期化 =====================
+      state.han = parseInt(document.getElementById('han-select').value);
+      state.fu = parseInt(document.getElementById('fu-select').value);
       updateToggleUI();
+      syncFuOptions();
+      updateFuUI();
       calculateScore();
     </script>
   </body>
