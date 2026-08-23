@@ -211,6 +211,18 @@ check('早見表: マスをタップで本体に反映', await page.evaluate(() 
   return { han: state.han, fu: state.fu, score: document.getElementById('score-display').innerText.replace(/\s+/g, ' ') };
 }), { han: 4, fu: 40, score: '8,000点 (満貫)' });
 
+// ============ 6. モーダルの開閉 ============
+for (const [name, open] of [['符数計算アシスト', 'openFuModal'], ['翻数計算アシスト', 'openHanModal'], ['点数早見表', 'openTableModal']]) {
+  check(`モーダル: ${name} は×ボタンで閉じる`, await page.evaluate(([o]) => {
+    resetAll();
+    window[o]();
+    const modal = document.querySelector('.modal-overlay.open');
+    const id = modal && modal.id;
+    modal.querySelector('.close-modal-btn').click();
+    return { id, closed: !document.querySelector('.modal-overlay.open') };
+  }, [open]), { id: { openFuModal: 'fu-modal', openHanModal: 'han-modal', openTableModal: 'table-modal' }[open], closed: true });
+}
+
 // ============ 結果 ============
 await browser.close();
 
