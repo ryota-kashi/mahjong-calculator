@@ -726,6 +726,24 @@
       .score-table td.pick { cursor: pointer; }
       .score-table td.cur { background: var(--green); color: var(--text-on-green); font-weight: 700; }
       .score-table td.na { color: var(--text-sub); opacity: 0.5; }
+
+      .score-table tbody th .rank-sub {
+        display: block;
+        font-size: 0.66rem;
+        font-weight: 500;
+        opacity: 0.75;
+        margin-top: 1px;
+      }
+      .score-table tr.tier-head th {
+        background: var(--green-light);
+        color: var(--green);
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-align: left;
+        padding: 5px 7px;
+      }
+      .score-table td.tier-val { text-align: center; }
       .score-table .tsumo-cell { font-size: 0.72rem; }
     </style>
   </head>
@@ -1555,9 +1573,20 @@
               html += '</tr>';
           });
 
-          [[5, '満貫'], [6, '跳満'], [8, '倍満'], [11, '三倍満'], [13, '役満'], [26, 'ダブル役満']].forEach((m) => {
-              const cur = sameView && state.han === m[0] ? ' cur' : '';
-              html += `<tr><th>${m[1]}</th><td class="pick${cur}" colspan="4" onclick="pickFromTable(${m[0]}, 30)" role="button" tabindex="0">${tableCellText(m[0], 30)}</td></tr>`;
+          html += '<tr class="tier-head"><th colspan="5">符に関係なく翻数だけで決まる</th></tr>';
+
+          const TIERS = [
+              [5, '5翻', '満貫'],
+              [6, '6-7翻', '跳満'],
+              [8, '8-10翻', '倍満'],
+              [11, '11-12翻', '三倍満'],
+              [13, '13翻以上', '役満'],
+              [26, 'ダブル役満', '']
+          ];
+          TIERS.forEach((tier) => {
+              const cur = sameView && state.han === tier[0] ? ' cur' : '';
+              const label = tier[2] ? `${tier[1]}<span class="rank-sub">${tier[2]}</span>` : tier[1];
+              html += `<tr><th>${label}</th><td class="pick tier-val${cur}" colspan="4" onclick="pickFromTable(${tier[0]}, 30)" role="button" tabindex="0">${tableCellText(tier[0], 30)}</td></tr>`;
           });
 
           document.getElementById('score-table').innerHTML = html + '</tbody>';
