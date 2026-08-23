@@ -623,6 +623,110 @@
         opacity: 0.75;
         margin-top: 6px;
       }
+
+      /* --- 追加: 翻数アシストのチップ・カウンタ --- */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 6px;
+      }
+
+      .chip {
+        background: var(--bg-card);
+        border: 1.5px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 11px;
+        font-size: 0.8rem;
+        color: var(--text-main);
+        cursor: pointer;
+        font-family: inherit;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+      }
+
+      .chip .chip-han {
+        font-size: 0.68rem;
+        color: var(--text-sub);
+      }
+
+      .chip.active {
+        background: var(--green);
+        border-color: var(--green);
+        color: var(--text-on-green);
+        font-weight: 700;
+      }
+
+      .chip.active .chip-han { color: var(--text-on-green-sub); }
+      .chip:disabled { opacity: 0.3; cursor: not-allowed; }
+
+      .counter-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .counter-row:last-child { border-bottom: 0; }
+      .counter-row .cname { font-size: 0.85rem; }
+      .counter-row .csub { display: block; font-size: 0.7rem; color: var(--text-sub); }
+
+      .counter {
+        display: grid;
+        grid-template-columns: 32px 38px 32px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .counter button {
+        background: var(--green-light);
+        border: 0;
+        cursor: pointer;
+        color: var(--text-main);
+        font-size: 1rem;
+        font-family: inherit;
+      }
+      .counter .cval {
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      /* --- 追加: 点数早見表 --- */
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+      .score-table { border-collapse: collapse; width: 100%; }
+      .score-table th,
+      .score-table td {
+        padding: 6px 7px;
+        font-size: 0.78rem;
+        text-align: right;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--border);
+      }
+      .score-table thead th {
+        background: var(--green-light);
+        color: var(--green);
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+      .score-table tbody th {
+        text-align: left;
+        color: var(--text-sub);
+        font-weight: 600;
+      }
+      .score-table tbody tr:last-child th,
+      .score-table tbody tr:last-child td { border-bottom: 0; }
+      .score-table td.pick { cursor: pointer; }
+      .score-table td.cur { background: var(--green); color: var(--text-on-green); font-weight: 700; }
+      .score-table td.na { color: var(--text-sub); opacity: 0.5; }
+      .score-table .tsumo-cell { font-size: 0.72rem; }
     </style>
   </head>
   <body>
@@ -630,6 +734,9 @@
       <div class="header-row">
         <h1>🀄 点数計算機</h1>
         <div class="header-actions">
+          <button type="button" class="theme-btn" id="table-btn" onclick="openTableModal()" title="点数早見表" aria-label="点数早見表">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+          </button>
           <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="ダークモード切替">
             <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -658,6 +765,14 @@
         </div>
 
         <div class="control-group">
+            <label>手の状態</label>
+            <div class="toggle-group">
+                <button type="button" class="toggle-btn active" id="btn-menzen" onclick="setMenzen(true)">門前</button>
+                <button type="button" class="toggle-btn" id="btn-naki" onclick="setMenzen(false)">鳴き</button>
+            </div>
+        </div>
+
+        <div class="control-group">
             <label>翻数 (ハン)</label>
             <select id="han-select" onchange="onHanChange()">
                 <option value="1">1翻</option>
@@ -669,7 +784,9 @@
                 <option value="8">8-10翻 (倍満)</option>
                 <option value="11">11-12翻 (三倍満)</option>
                 <option value="13">13翻+ (役満)</option>
+                <option value="26">ダブル役満</option>
             </select>
+            <button type="button" class="helper-btn" id="han-assist-btn" onclick="openHanModal()">翻数計算アシスト</button>
         </div>
 
         <div class="control-group">
@@ -725,24 +842,6 @@
             <div class="fu-state-bar">
                 <span id="fu-current-cond">子・ロン</span>
                 <span id="fu-current-fu">適用中: 30符</span>
-            </div>
-
-            <!-- 基本条件 + アガリ方 を横並び -->
-            <div class="fu-row-2col">
-                <div>
-                    <div class="fu-section-title">基本条件</div>
-                    <div class="fu-btn-grid">
-                        <button type="button" class="fu-btn active" id="btn-menzen" onclick="setMenzen(true)">門前</button>
-                        <button type="button" class="fu-btn" id="btn-naki" onclick="setMenzen(false)">鳴き</button>
-                    </div>
-                </div>
-                <div>
-                    <div class="fu-section-title">アガリ方</div>
-                    <div class="fu-btn-grid">
-                        <button type="button" class="fu-btn active" id="btn-fu-ron" onclick="setWinType('ron')">ロン</button>
-                        <button type="button" class="fu-btn" id="btn-fu-tsumo" onclick="setWinType('tsumo')">ツモ</button>
-                    </div>
-                </div>
             </div>
 
             <div class="fu-section-title">特殊形</div>
@@ -814,6 +913,70 @@
         </div>
     </div>
 
+    <!-- Han Calculation Modal -->
+    <div class="modal-overlay" id="han-modal" onclick="onOverlayClick(event)">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="han-modal-title">
+            <div class="modal-header">
+                <h2 id="han-modal-title">翻数計算アシスト</h2>
+                <div class="modal-header-actions">
+                    <button type="button" class="modal-reset-btn" onclick="resetHanState()" title="翻数をリセット">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+                    <button type="button" class="close-modal-btn" onclick="closeModals()">&times;</button>
+                </div>
+            </div>
+
+            <div class="fu-state-bar">
+                <span id="han-current-cond">子・ロン・門前</span>
+                <span id="han-current-han">適用中: 1翻</span>
+            </div>
+
+            <div class="fu-section-title">1翻</div>
+            <div class="chips" id="yaku-1"></div>
+            <div class="fu-section-title">2翻</div>
+            <div class="chips" id="yaku-2"></div>
+            <div class="fu-section-title">3翻以上</div>
+            <div class="chips" id="yaku-3"></div>
+
+            <div class="fu-section-title">役牌・ドラ</div>
+            <div id="han-counters"></div>
+
+            <div class="fu-section-title">役満</div>
+            <div class="chips" id="yaku-man"></div>
+
+            <div class="fu-warn" id="han-warn" style="display:none"></div>
+            <div class="calc-result-preview" id="han-preview">合計: 0翻</div>
+
+            <button type="button" class="primary" onclick="applyHanResult()">翻数を反映して閉じる</button>
+        </div>
+    </div>
+
+    <!-- Score Table Modal -->
+    <div class="modal-overlay" id="table-modal" onclick="onOverlayClick(event)">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="table-modal-title">
+            <div class="modal-header">
+                <h2 id="table-modal-title">点数早見表</h2>
+                <div class="modal-header-actions">
+                    <button type="button" class="close-modal-btn" onclick="closeModals()">&times;</button>
+                </div>
+            </div>
+
+            <div class="fu-row-2col">
+                <div class="fu-btn-grid">
+                    <button type="button" class="fu-btn" id="btn-table-east" onclick="setTableView('dealer', true)">親</button>
+                    <button type="button" class="fu-btn active" id="btn-table-south" onclick="setTableView('dealer', false)">子</button>
+                </div>
+                <div class="fu-btn-grid">
+                    <button type="button" class="fu-btn active" id="btn-table-ron" onclick="setTableView('tsumo', false)">ロン</button>
+                    <button type="button" class="fu-btn" id="btn-table-tsumo" onclick="setTableView('tsumo', true)">ツモ</button>
+                </div>
+            </div>
+
+            <div class="table-wrap"><table class="score-table" id="score-table"></table></div>
+            <p class="fu-note" id="table-note" style="text-align:left"></p>
+        </div>
+    </div>
+
     <script>
       // ===================== テーマ =====================
       function applyTheme(dark) {
@@ -847,6 +1010,7 @@
       };
       const OPEN_KOTSU_KEYS = ['kotsu-mo', 'kotsu-yo'];
       const OPEN_KAN_KEYS = ['kan-mo', 'kan-yo'];
+      const FU_OPTIONS = [20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110];
       const WAIT_FU = { ryanmen: 0, shanpon: 0, other: 2 };
       const WAIT_KEYS = ['ryanmen', 'shanpon', 'other'];
       const HEAD_KEYS = [0, 2, 4];
@@ -855,6 +1019,7 @@
           return {
               isDealer: false, // false = 子, true = 親
               isTsumo: false,  // false = ロン, true = ツモ
+              menzen: true,    // 門前かどうか（翻数・符の両方に効く）
               han: 1,
               fu: 30,
               honba: 0
@@ -863,7 +1028,6 @@
 
       function initialFuState() {
           return {
-              menzen: true,
               chiitoi: false,
               head: 0,
               wait: 'ryanmen',
@@ -881,7 +1045,8 @@
       // ===================== 点数の中核ロジック =====================
       // 基本点。5翻以上は符を参照しない。4翻以下は 符 × 2^(2+翻)、2000超で満貫打ち切り。
       function basePointsOf(han, fu) {
-          if (han >= 13) return 8000; // 役満
+          if (han >= 26) return 16000; // ダブル役満
+          if (han >= 13) return 8000;  // 役満
           if (han >= 11) return 6000; // 三倍満
           if (han >= 8) return 4000;  // 倍満
           if (han >= 6) return 3000;  // 跳満
@@ -892,6 +1057,7 @@
 
       // 役職名は金額から逆算せず、翻と符から直接判定する
       function rankNameOf(han, fu) {
+          if (han >= 26) return 'ダブル役満';
           if (han >= 13) return '役満';
           if (han >= 11) return '三倍満';
           if (han >= 8) return '倍満';
@@ -978,7 +1144,7 @@
           if (state.isTsumo) {
               total += 2;
               parts.push('ツモ 2');
-          } else if (fuState.menzen) {
+          } else if (state.menzen) {
               total += 10;
               parts.push('門前ロン 10');
           }
@@ -1007,7 +1173,7 @@
           let note = '';
 
           // 平和形（門前・両面待ち・雀頭0符・面子符なし）
-          const isPinfuShape = fuState.menzen && mentsuFu === 0 && fuState.head === 0 && fuState.wait === 'ryanmen';
+          const isPinfuShape = state.menzen && mentsuFu === 0 && fuState.head === 0 && fuState.wait === 'ryanmen';
 
           if (state.isTsumo && isPinfuShape) {
               fu = 20;
@@ -1028,10 +1194,15 @@
 
       // ===================== 符アシストの操作 =====================
       function setMenzen(value) {
-          if (fuState.chiitoi) return;
           if (value && !menzenAllowed()) return;
-          fuState.menzen = value;
+          state.menzen = value;
+          updateToggleUI();
+          updateHanUI();
           updateFuUI();
+          reapplyAssists();
+          syncFuOptions();
+          updateFuUI();
+          calculateScore();
       }
 
       function toggleChiitoi() {
@@ -1069,16 +1240,15 @@
       }
 
       function updateFuUI() {
-          // 明刻・明槓と門前の整合を強制する
-          if (!menzenAllowed()) fuState.menzen = false;
+          // 明刻・明槓と門前の整合を強制する（メイン画面のトグルにも反映）
+          if (!menzenAllowed()) state.menzen = false;
+          document.getElementById('btn-menzen').className = state.menzen ? 'toggle-btn active' : 'toggle-btn';
+          document.getElementById('btn-menzen').disabled = !menzenAllowed();
+          document.getElementById('btn-naki').className = !state.menzen ? 'toggle-btn active' : 'toggle-btn';
 
           const chii = fuState.chiitoi;
 
           setFuBtn('btn-chiitoi', chii, false);
-          setFuBtn('btn-menzen', fuState.menzen && !chii, chii || !menzenAllowed());
-          setFuBtn('btn-naki', !fuState.menzen && !chii, chii);
-          setFuBtn('btn-fu-ron', !state.isTsumo, false);
-          setFuBtn('btn-fu-tsumo', state.isTsumo, false);
 
           WAIT_KEYS.forEach((w) => setFuBtn('btn-wait-' + w, !chii && fuState.wait === w, chii));
           HEAD_KEYS.forEach((h) => setFuBtn('btn-head-' + h, !chii && fuState.head === h, chii));
@@ -1092,8 +1262,7 @@
               btn.disabled = chii;
           }
 
-          document.getElementById('fu-current-cond').innerText =
-              `${state.isDealer ? '親' : '子'}・${state.isTsumo ? 'ツモ' : 'ロン'}`;
+          document.getElementById('fu-current-cond').innerText = condLabel();
           document.getElementById('fu-current-fu').innerText = `適用中: ${state.fu}符`;
 
           const used = totalMentsuCount();
@@ -1107,7 +1276,7 @@
               if (!menzenAllowed()) {
                   warns.push('明カン、または明刻が2つ以上あるため「鳴き」で固定されます（門前ロンの10符は付きません）。');
               }
-              if (fuState.menzen && !state.isTsumo && openKotsuCount() === 1) {
+              if (state.menzen && !state.isTsumo && openKotsuCount() === 1) {
                   warns.push('門前ロンのシャボ待ちで完成した刻子1つだけは明刻扱いです。門前ロンの10符は維持されます。');
               }
               if (fuState.wait === 'shanpon' && !state.isTsumo && openKotsuCount() === 0) {
@@ -1135,7 +1304,7 @@
           syncFuOptions(); // 翻数との整合（20符×1翻など）をここで弾く
           updateFuUI();
           calculateScore();
-          closeFuModal();
+          closeModals();
       }
 
       // アガリ方を変えたとき、アシストで確定した符を追従させる
@@ -1146,23 +1315,312 @@
           state.fu = r.fu;
       }
 
+      // ===================== 翻数計算アシスト =====================
+      // menzen: 門前限定役 / kui: 鳴いたときの食い下がり後の翻数 / needTsumo: ツモ限定
+      const YAKU = [
+          { id: 'riichi',    n: 'リーチ',       h: 1, menzen: true },
+          { id: 'ippatsu',   n: '一発',         h: 1, menzen: true },
+          { id: 'mtsumo',    n: '門前清自摸和', h: 1, menzen: true, needTsumo: true },
+          { id: 'pinfu',     n: '平和',         h: 1, menzen: true },
+          { id: 'tanyao',    n: '断幺九',       h: 1 },
+          { id: 'iipeiko',   n: '一盃口',       h: 1, menzen: true },
+          { id: 'haitei',    n: '海底・河底',   h: 1 },
+          { id: 'rinshan',   n: '嶺上開花',     h: 1 },
+          { id: 'chankan',   n: '槍槓',         h: 1 },
+
+          { id: 'wriichi',   n: 'ダブルリーチ', h: 2, menzen: true },
+          { id: 'sanshoku',  n: '三色同順',     h: 2, kui: 1 },
+          { id: 'ittsu',     n: '一気通貫',     h: 2, kui: 1 },
+          { id: 'chanta',    n: '混全帯幺九',   h: 2, kui: 1 },
+          { id: 'chiitoi',   n: '七対子',       h: 2, menzen: true },
+          { id: 'toitoi',    n: '対々和',       h: 2 },
+          { id: 'sananko',   n: '三暗刻',       h: 2 },
+          { id: 'sandoko',   n: '三色同刻',     h: 2 },
+          { id: 'sankan',    n: '三槓子',       h: 2 },
+          { id: 'honroto',   n: '混老頭',       h: 2 },
+          { id: 'shosan',    n: '小三元',       h: 2 },
+
+          { id: 'honitsu',   n: '混一色',       h: 3, kui: 2 },
+          { id: 'junchan',   n: '純全帯幺九',   h: 3, kui: 2 },
+          { id: 'ryanpeiko', n: '二盃口',       h: 3, menzen: true },
+          { id: 'chinitsu',  n: '清一色',       h: 6, kui: 5 }
+      ];
+
+      const YAKUMAN = [
+          { id: 'kokushi', n: '国士無双' }, { id: 'suanko', n: '四暗刻' },
+          { id: 'daisangen', n: '大三元' }, { id: 'tsuiso', n: '字一色' },
+          { id: 'ryuiso', n: '緑一色' },    { id: 'chinroto', n: '清老頭' },
+          { id: 'sukantsu', n: '四槓子' },  { id: 'shosushi', n: '小四喜' },
+          { id: 'daisushi', n: '大四喜', dbl: true },
+          { id: 'churen', n: '九蓮宝燈' },  { id: 'tenho', n: '天和' }, { id: 'chiho', n: '地和' }
+      ];
+
+      const HAN_COUNTERS = [
+          { id: 'yakuhai', n: '役牌', s: '白・發・中・自風・場風', max: 4 },
+          { id: 'dora',    n: 'ドラ', s: '表ドラ',                max: 12 },
+          { id: 'aka',     n: '赤ドラ', s: '赤5',                 max: 4 },
+          { id: 'ura',     n: '裏ドラ', s: 'リーチ時のみ',        max: 12 }
+      ];
+
+      function initialHanState() {
+          return { yaku: {}, yakuman: {}, yakuhai: 0, dora: 0, aka: 0, ura: 0, applied: false };
+      }
+
+      let hanState = initialHanState();
+
+      // 鳴きなら食い下がり後の翻数を返す
+      function yakuHanOf(y) {
+          if (y.menzen) return state.menzen ? y.h : 0;
+          if (y.kui && !state.menzen) return y.kui;
+          return y.h;
+      }
+
+      function yakuAvailable(y) {
+          if (y.menzen && !state.menzen) return false;
+          if (y.needTsumo && !state.isTsumo) return false;
+          return true;
+      }
+
+      function computeHan() {
+          let dbl = false, anyYakuman = false;
+          const names = [];
+          YAKUMAN.forEach((y) => {
+              if (!hanState.yakuman[y.id]) return;
+              anyYakuman = true;
+              if (y.dbl) dbl = true;
+              names.push(y.n);
+          });
+          if (anyYakuman) return { han: dbl ? 26 : 13, yakuman: true, list: names };
+
+          let total = 0;
+          const list = [];
+          YAKU.forEach((y) => {
+              if (!hanState.yaku[y.id] || !yakuAvailable(y)) return;
+              const h = yakuHanOf(y);
+              if (h <= 0) return;
+              total += h;
+              list.push(`${y.n} ${h}`);
+          });
+          HAN_COUNTERS.forEach((c) => {
+              if (hanState[c.id] > 0) { total += hanState[c.id]; list.push(`${c.n} ${hanState[c.id]}`); }
+          });
+          return { han: total, yakuman: false, list: list };
+      }
+
+      // select の選択肢に落とし込む（6-7翻 → 6 など）
+      function bucketHan(h) {
+          if (h >= 26) return 26;
+          if (h >= 13) return 13;
+          if (h >= 11) return 11;
+          if (h >= 8) return 8;
+          if (h >= 6) return 6;
+          if (h >= 5) return 5;
+          return Math.max(1, h);
+      }
+
+      function hanSelectLabel(v) {
+          const sel = document.getElementById('han-select');
+          for (const o of sel.options) if (parseInt(o.value) === v) return o.text;
+          return `${v}翻`;
+      }
+
+      function toggleYaku(id) {
+          hanState.yaku[id] = !hanState.yaku[id];
+          updateHanUI();
+      }
+
+      function toggleYakuman(id) {
+          hanState.yakuman[id] = !hanState.yakuman[id];
+          updateHanUI();
+      }
+
+      function addHanCounter(id, delta) {
+          const def = HAN_COUNTERS.filter((c) => c.id === id)[0];
+          hanState[id] = Math.max(0, Math.min(def.max, hanState[id] + delta));
+          updateHanUI();
+      }
+
+      function resetHanState() {
+          hanState = initialHanState();
+          updateHanUI();
+      }
+
+      function chipHTML(onclick, name, han, active, disabled) {
+          return `<button type="button" class="chip${active ? ' active' : ''}" onclick="${onclick}"` +
+              `${disabled ? ' disabled' : ''} aria-pressed="${active ? 'true' : 'false'}">${name}` +
+              (han !== null ? `<span class="chip-han">${han}翻</span>` : '') + '</button>';
+      }
+
+      function updateHanUI() {
+          const buckets = { 1: [], 2: [], 3: [] };
+          YAKU.forEach((y) => {
+              const avail = yakuAvailable(y);
+              if (!avail && hanState.yaku[y.id]) hanState.yaku[y.id] = false;
+              const bucket = y.h >= 3 ? 3 : y.h;
+              buckets[bucket].push(chipHTML(`toggleYaku('${y.id}')`, y.n, avail ? yakuHanOf(y) : y.h, !!hanState.yaku[y.id], !avail));
+          });
+          document.getElementById('yaku-1').innerHTML = buckets[1].join('');
+          document.getElementById('yaku-2').innerHTML = buckets[2].join('');
+          document.getElementById('yaku-3').innerHTML = buckets[3].join('');
+          document.getElementById('yaku-man').innerHTML = YAKUMAN.map((y) =>
+              chipHTML(`toggleYakuman('${y.id}')`, y.n + (y.dbl ? '（W）' : ''), null, !!hanState.yakuman[y.id], false)
+          ).join('');
+
+          document.getElementById('han-counters').innerHTML = HAN_COUNTERS.map((c) =>
+              `<div class="counter-row"><span class="cname">${c.n}<span class="csub">${c.s}</span></span>` +
+              `<span class="counter">` +
+              `<button type="button" onclick="addHanCounter('${c.id}', -1)" aria-label="${c.n}を減らす">−</button>` +
+              `<span class="cval">${hanState[c.id]}</span>` +
+              `<button type="button" onclick="addHanCounter('${c.id}', 1)" aria-label="${c.n}を増やす">＋</button></span></div>`
+          ).join('');
+
+          document.getElementById('han-current-cond').innerText = condLabel();
+          document.getElementById('han-current-han').innerText = `適用中: ${hanSelectLabel(state.han)}`;
+
+          const r = computeHan();
+          const warns = [];
+          if (!state.menzen) warns.push('鳴きのため門前限定役は選べません。三色・一通・混一色などは食い下がり後の翻数で計算しています。');
+          if (r.yakuman) warns.push('役満を選んでいるため、通常役とドラは加算しません。');
+          if (!r.yakuman && r.han === 0) warns.push('役が選ばれていません。ドラだけでは和了できないため反映できません。');
+          const warnEl = document.getElementById('han-warn');
+          warnEl.innerHTML = warns.map((w) => '・' + w).join('<br>');
+          warnEl.style.display = warns.length ? '' : 'none';
+
+          const head = r.yakuman ? (r.han >= 26 ? 'ダブル役満' : '役満') : `合計: ${r.han}翻`;
+          document.getElementById('han-preview').innerHTML =
+              `${head}<br><span class="calc-sub">${r.list.length ? r.list.join(' ／ ') : '未選択'}</span>`;
+      }
+
+      function applyHanResult() {
+          const r = computeHan();
+          if (!r.yakuman && r.han === 0) return;
+          state.han = bucketHan(r.han);
+          hanState.applied = true;
+          document.getElementById('han-select').value = String(state.han);
+          syncFuOptions();
+          updateFuUI();
+          calculateScore();
+          closeModals();
+      }
+
+      // 条件が変わったとき、アシストで確定した値を追従させる
+      function reapplyAssists() {
+          if (hanState.applied) {
+              const r = computeHan();
+              if (r.yakuman || r.han > 0) {
+                  state.han = bucketHan(r.han);
+                  document.getElementById('han-select').value = String(state.han);
+              }
+          }
+          reapplyAssistFu();
+      }
+
+      // ===================== 点数早見表 =====================
+      const tableView = { dealer: false, tsumo: false };
+
+      function setTableView(key, value) {
+          tableView[key] = value;
+          renderScoreTable();
+      }
+
+      function tableCellText(han, fu) {
+          const bp = basePointsOf(han, fu);
+          if (tableView.tsumo) {
+              const dealerPay = ceil100(bp * 2);
+              if (tableView.dealer) return `<span class="tsumo-cell">${dealerPay.toLocaleString()} all</span>`;
+              return `<span class="tsumo-cell">${ceil100(bp).toLocaleString()}/${dealerPay.toLocaleString()}</span>`;
+          }
+          return ceil100(bp * (tableView.dealer ? 6 : 4)).toLocaleString();
+      }
+
+      function renderScoreTable() {
+          document.getElementById('btn-table-east').className = tableView.dealer ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-table-south').className = !tableView.dealer ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-table-ron').className = !tableView.tsumo ? 'fu-btn active' : 'fu-btn';
+          document.getElementById('btn-table-tsumo').className = tableView.tsumo ? 'fu-btn active' : 'fu-btn';
+
+          const hans = [1, 2, 3, 4];
+          const sameView = tableView.dealer === state.isDealer && tableView.tsumo === state.isTsumo;
+
+          let html = '<thead><tr><th style="text-align:left">符 \\ 翻</th>' +
+              hans.map((h) => `<th>${h}翻</th>`).join('') + '</tr></thead><tbody>';
+
+          FU_OPTIONS.forEach((fu) => {
+              html += `<tr><th>${fu}符</th>`;
+              hans.forEach((h) => {
+                  if (fuInvalidReason(fu, h, tableView.tsumo)) { html += '<td class="na">—</td>'; return; }
+                  const cur = sameView && state.han === h && state.fu === fu ? ' cur' : '';
+                  html += `<td class="pick${cur}" onclick="pickFromTable(${h}, ${fu})" role="button" tabindex="0">${tableCellText(h, fu)}</td>`;
+              });
+              html += '</tr>';
+          });
+
+          [[5, '満貫'], [6, '跳満'], [8, '倍満'], [11, '三倍満'], [13, '役満'], [26, 'ダブル役満']].forEach((m) => {
+              const cur = sameView && state.han === m[0] ? ' cur' : '';
+              html += `<tr><th>${m[1]}</th><td class="pick${cur}" colspan="4" onclick="pickFromTable(${m[0]}, 30)" role="button" tabindex="0">${tableCellText(m[0], 30)}</td></tr>`;
+          });
+
+          document.getElementById('score-table').innerHTML = html + '</tbody>';
+          document.getElementById('table-note').innerText = tableView.tsumo
+              ? (tableView.dealer ? '数値は子1人あたりの支払い（オール）です。本場は含みません。'
+                                  : '数値は「子の支払い / 親の支払い」です。本場は含みません。')
+              : '数値は放銃者が支払う総額です。本場は含みません。';
+      }
+
+      function pickFromTable(han, fu) {
+          state.isDealer = tableView.dealer;
+          state.isTsumo = tableView.tsumo;
+          state.han = han;
+          state.fu = fu;
+          hanState.applied = false;
+          fuState.applied = false;
+          document.getElementById('han-select').value = String(han);
+          document.getElementById('fu-select').value = String(fu);
+          updateToggleUI();
+          syncFuOptions();
+          updateFuUI();
+          calculateScore();
+          closeModals();
+      }
+
       // ===================== モーダル =====================
+      function condLabel() {
+          return `${state.isDealer ? '親' : '子'}・${state.isTsumo ? 'ツモ' : 'ロン'}・${state.menzen ? '門前' : '鳴き'}`;
+      }
+
+      function closeModals() {
+          document.querySelectorAll('.modal-overlay.open').forEach((m) => m.classList.remove('open'));
+      }
+
+      function openModal(id) {
+          closeModals();
+          document.getElementById(id).classList.add('open');
+      }
+
       function openFuModal() {
           if (state.han >= 5) return;
-          document.getElementById('fu-modal').classList.add('open');
+          openModal('fu-modal');
           updateFuUI();
       }
 
-      function closeFuModal() {
-          document.getElementById('fu-modal').classList.remove('open');
+      function openHanModal() {
+          openModal('han-modal');
+          updateHanUI();
+      }
+
+      function openTableModal() {
+          tableView.dealer = state.isDealer;
+          tableView.tsumo = state.isTsumo;
+          openModal('table-modal');
+          renderScoreTable();
       }
 
       function onOverlayClick(event) {
-          if (event.target === document.getElementById('fu-modal')) closeFuModal();
+          if (event.target.classList.contains('modal-overlay')) closeModals();
       }
 
       document.addEventListener('keydown', function (e) {
-          if (e.key === 'Escape') closeFuModal();
+          if (e.key === 'Escape') closeModals();
       });
 
       function resetFuState() {
@@ -1174,6 +1632,9 @@
       function resetAll() {
           state = initialState();
           fuState = initialFuState();
+          hanState = initialHanState();
+          tableView.dealer = false;
+          tableView.tsumo = false;
 
           document.getElementById('han-select').value = '1';
           document.getElementById('fu-select').value = '30';
@@ -1181,6 +1642,7 @@
 
           updateToggleUI();
           syncFuOptions();
+          updateHanUI();
           updateFuUI();
           calculateScore();
       }
@@ -1193,7 +1655,9 @@
 
       function onHanChange() {
           state.han = parseInt(document.getElementById('han-select').value);
+          hanState.applied = false; // 手動で選んだらアシスト追従を解除
           syncFuOptions();
+          updateHanUI();
           updateFuUI();
           calculateScore();
       }
@@ -1208,6 +1672,7 @@
       function setWind(wind) {
           state.isDealer = (wind === 'east');
           updateToggleUI();
+          updateHanUI();
           updateFuUI();
           calculateScore();
       }
@@ -1215,9 +1680,10 @@
       function setWinType(type) {
           state.isTsumo = (type === 'tsumo');
           updateToggleUI();
-          updateFuUI();      // ロン(+10)とツモ(+2)で符が変わるため再計算
-          reapplyAssistFu(); // アシスト確定済みなら符も追従させる
-          syncFuOptions();   // 20符ロンなどをここで弾く
+          updateHanUI();  // 門前清自摸和など、ツモ限定役の可否が変わる
+          updateFuUI();   // ロン(+10)とツモ(+2)で符が変わるため再計算
+          reapplyAssists();
+          syncFuOptions(); // 20符ロンなどをここで弾く
           updateFuUI();
           calculateScore();
       }
@@ -1228,6 +1694,11 @@
 
           document.getElementById('btn-win-tsumo').className = state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
           document.getElementById('btn-win-ron').className = !state.isTsumo ? 'toggle-btn active' : 'toggle-btn';
+
+          const menzenBtn = document.getElementById('btn-menzen');
+          menzenBtn.className = state.menzen ? 'toggle-btn active' : 'toggle-btn';
+          menzenBtn.disabled = !menzenAllowed();
+          document.getElementById('btn-naki').className = !state.menzen ? 'toggle-btn active' : 'toggle-btn';
       }
 
       // ===================== 点数表示 =====================
@@ -1283,6 +1754,7 @@
       state.fu = parseInt(document.getElementById('fu-select').value);
       updateToggleUI();
       syncFuOptions();
+      updateHanUI();
       updateFuUI();
       calculateScore();
     </script>
