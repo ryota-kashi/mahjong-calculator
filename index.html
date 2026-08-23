@@ -991,7 +991,6 @@
             </div>
 
             <div class="table-wrap"><table class="score-table" id="score-table"></table></div>
-            <p class="fu-note" id="table-note" style="text-align:left"></p>
         </div>
     </div>
 
@@ -1595,10 +1594,6 @@
           });
 
           document.getElementById('score-table').innerHTML = html + '</tbody>';
-          document.getElementById('table-note').innerText = tableView.tsumo
-              ? (tableView.dealer ? '数値は子1人あたりの支払い（オール）です。本場は含みません。'
-                                  : '数値は「子の支払い / 親の支払い」です。本場は含みません。')
-              : '数値は放銃者が支払う総額です。本場は含みません。';
       }
 
       function pickFromTable(han, fu) {
