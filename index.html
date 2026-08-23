@@ -1565,6 +1565,11 @@
 
           FU_OPTIONS.forEach((fu) => {
               html += `<tr><th>${fu}符</th>`;
+              // 20符ロンは成立しないので、ダッシュを4つ並べる代わりに理由を出す
+              if (fu === 20 && !tableView.tsumo) {
+                  html += '<td class="na tier-val" colspan="4">ロンでは成立しません（平和ツモのみ）</td></tr>';
+                  return;
+              }
               hans.forEach((h) => {
                   if (fuInvalidReason(fu, h, tableView.tsumo)) { html += '<td class="na">—</td>'; return; }
                   const cur = sameView && state.han === h && state.fu === fu ? ' cur' : '';

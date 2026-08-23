@@ -178,6 +178,32 @@ check('早見表: 子ロンの30符行', await page.evaluate(() => {
   return [...row.querySelectorAll('td')].map((td) => td.innerText);
 }), ['1,000', '2,000', '3,900', '7,700']);
 
+check('早見表: ロンでは20符行に理由を出す', await page.evaluate(() => {
+  resetAll();
+  openTableModal();
+  const row = [...document.querySelectorAll('#score-table tbody tr')]
+    .find((r) => r.querySelector('th') && r.querySelector('th').innerText === '20符');
+  const cells = [...row.querySelectorAll('td')];
+  return { count: cells.length, text: cells[0].innerText };
+}), { count: 1, text: 'ロンでは成立しません（平和ツモのみ）' });
+
+check('早見表: ツモでは20符行に点数が並ぶ', await page.evaluate(() => {
+  resetAll();
+  openTableModal();
+  setTableView('tsumo', true);
+  const row = [...document.querySelectorAll('#score-table tbody tr')]
+    .find((r) => r.querySelector('th') && r.querySelector('th').innerText === '20符');
+  return [...row.querySelectorAll('td')].map((td) => td.innerText);
+}), ['—', '400/700', '700/1,300', '1,300/2,600']);
+
+check('早見表: 満貫以降は翻数の範囲を主ラベルにする', await page.evaluate(() => {
+  resetAll();
+  openTableModal();
+  return [...document.querySelectorAll('#score-table tbody tr')]
+    .filter((r) => r.querySelector('td.tier-val') && r.querySelector('th').innerText !== '20符')
+    .map((r) => r.querySelector('th').innerText.replace(/\n/g, '/'));
+}), ['5翻/満貫', '6-7翻/跳満', '8-10翻/倍満', '11-12翻/三倍満', '13翻以上/役満', 'ダブル役満']);
+
 check('早見表: マスをタップで本体に反映', await page.evaluate(() => {
   resetAll();
   openTableModal();
