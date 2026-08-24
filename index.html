@@ -67,6 +67,12 @@
 
       * { box-sizing: border-box; }
 
+      /* ダブルタップによる拡大だけを止める。ピンチズームは残るので
+         WCAG 1.4.4（テキストの拡大）は満たしたまま。 */
+      /* touch-action は継承されないので全要素に指定する。
+         manipulation はパン（スクロール）とピンチズームを許可する。 */
+      * { touch-action: manipulation; }
+
       body {
         margin: 0;
         padding: 20px 14px 40px;

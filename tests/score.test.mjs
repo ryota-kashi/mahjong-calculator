@@ -417,6 +417,18 @@ for (const [name, open] of [['符数計算アシスト', 'openFuModal'], ['翻�
   }, [open]), { id: { openFuModal: 'fu-modal', openHanModal: 'han-modal', openTableModal: 'table-modal' }[open], closed: true });
 }
 
+// ============ 6.5 タッチ操作 ============
+check('タッチ: ダブルタップズームを止めつつピンチズームは残す', await page.evaluate(() => {
+  const vp = document.querySelector('meta[name=viewport]').content;
+  const ta = (sel) => getComputedStyle(document.querySelector(sel)).touchAction;
+  return {
+    pinchAllowed: !/user-scalable\s*=\s*no|maximum-scale/.test(vp),
+    body: ta('body'),
+    button: ta('#btn-win-ron'),
+    result: ta('.result-area')
+  };
+}), { pinchAllowed: true, body: 'manipulation', button: 'manipulation', result: 'manipulation' });
+
 // ============ 7. ランダム操作で状態の不変条件を確認 ============
 // 決定的な擬似乱数で操作を繰り返し、状態どうしが矛盾しないことを確かめる。
 check('不変条件: 2000回のランダム操作で状態が破綻しない', await page.evaluate(() => {
