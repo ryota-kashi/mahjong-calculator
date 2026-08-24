@@ -328,6 +328,9 @@
       /* ---------- モーダル ---------- */
       .modal-overlay {
         position: fixed; inset: 0; z-index: 50;
+        height: 100vh;
+        height: 100dvh;
+        height: var(--vvh, 100dvh);
         background: rgba(10, 14, 10, 0.55);
         display: none;
         align-items: flex-end;
@@ -341,6 +344,7 @@
         width: 100%;
         max-width: 440px;
         max-height: 92vh;
+        max-height: 92dvh;
         background: var(--bg-card);
         border-radius: var(--r-lg) var(--r-lg) 0 0;
         animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -351,6 +355,11 @@
 
       .modal-header {
         flex: none;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--bg-card);
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
         display: flex; align-items: center; justify-content: space-between;
         gap: 10px;
         padding: 12px 16px;
@@ -609,7 +618,7 @@
       /* ---------- デスクトップ ---------- */
       @media (min-width: 640px) {
         .modal-overlay { align-items: center; padding: 24px; }
-        .modal-content { border-radius: var(--r-lg); max-height: 86vh; }
+        .modal-content { border-radius: var(--r-lg); max-height: 86vh; max-height: 86dvh; }
       }
     </style>
   </head>
@@ -829,6 +838,20 @@
           const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
           applyTheme(dark);
           try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) { /* 保存できない環境でも継続 */ }
+      }
+
+      // iOS Safari の vh はアドレスバーを含む高さを指すため、モーダルが画面外に
+      // はみ出す。実際に見えている高さを CSS 変数に入れて使う。
+      function syncViewportHeight() {
+          const vv = window.visualViewport;
+          const h = vv ? vv.height : window.innerHeight;
+          if (h > 0) document.documentElement.style.setProperty('--vvh', h + 'px');
+      }
+      syncViewportHeight();
+      window.addEventListener('resize', syncViewportHeight);
+      if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', syncViewportHeight);
+          window.visualViewport.addEventListener('scroll', syncViewportHeight);
       }
 
       // ===================== 定数 =====================
