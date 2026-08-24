@@ -376,6 +376,35 @@ check('早見表: セルはボタンでキーボードから選べる', await pa
   return { tag, focusable: document.activeElement !== document.body || true, han: state.han, fu: state.fu };
 }), { tag: 'BUTTON', focusable: true, han: 2, fu: 25 });
 
+check('役満: 選択中は理由と解除ボタンが上部に出る', await page.evaluate(() => {
+  resetAll();
+  openHanModal();
+  toggleYakuman('daisangen');
+  const warn = document.getElementById('han-warn');
+  const honitsu = [...document.querySelectorAll('#yaku-3 .chip')].find((c) => c.innerText.includes('混一色'));
+  const body = document.querySelector('#han-modal .modal-body');
+  // 警告が役チップより前（＝上）にあること
+  const warnFirst = body.compareDocumentPosition(warn) && (warn.compareDocumentPosition(honitsu) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  return {
+    hidden: warn.hidden,
+    namesYakuman: warn.innerText.includes('大三元'),
+    warnAboveChips: warnFirst,
+    honitsuDisabled: honitsu.disabled,
+    hasClearButton: !!warn.querySelector('.warn-action')
+  };
+}), { hidden: false, namesYakuman: true, warnAboveChips: true, honitsuDisabled: true, hasClearButton: true });
+
+check('役満: 解除すると通常役が選べるようになる', await page.evaluate(() => {
+  resetAll();
+  openHanModal();
+  toggleYakuman('daisangen');
+  document.querySelector('#han-warn .warn-action').click();
+  const honitsu = [...document.querySelectorAll('#yaku-3 .chip')].find((c) => c.innerText.includes('混一色'));
+  honitsu.click();
+  return { anyYakuman: Object.values(hanState.yakuman).some(Boolean),
+           honitsu: !!hanState.yaku.honitsu, han: computeHan().han };
+}), { anyYakuman: false, honitsu: true, han: 3 });
+
 // ============ 6. モーダルの開閉 ============
 for (const [name, open] of [['符数計算アシスト', 'openFuModal'], ['翻数計算アシスト', 'openHanModal'], ['点数早見表', 'openTableModal']]) {
   check(`モーダル: ${name} は×ボタンで閉じる`, await page.evaluate(([o]) => {

@@ -244,7 +244,22 @@
       .hint li::before, .fu-warn li::before {
         content: "・"; position: absolute; left: -1.1em;
       }
-      .fu-warn { margin: 10px 0 0; }
+      .fu-warn { margin: 0 0 10px; }
+
+      .warn-action {
+        display: inline-block;
+        margin-top: 6px;
+        min-height: 36px;
+        padding: 6px 12px;
+        background: var(--bg-card);
+        border: 1px solid var(--warn-bd);
+        border-radius: var(--r-sm);
+        color: var(--warn-fg);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .warn-action:hover { background: var(--warn-bg); }
 
       /* ---------- 本場 ---------- */
       .honba-control {
@@ -690,6 +705,8 @@
                     <span id="fu-current-fu">適用中: 30符</span>
                 </div>
 
+                <ul class="fu-warn" id="fu-warn" role="status" hidden></ul>
+
                 <h3 class="fu-section-title">特殊形</h3>
                 <div class="fu-btn-grid">
                     <button type="button" class="fu-btn" id="btn-chiitoi" onclick="toggleChiitoi()" aria-pressed="false">七対子<small>25符固定</small></button>
@@ -704,8 +721,6 @@
                 <h3 class="fu-section-title">面子（刻子・槓子）</h3>
                 <p class="fu-note" id="mentsu-remain"></p>
                 <div class="mentsu-grid" id="mentsu-grid"></div>
-
-                <ul class="fu-warn" id="fu-warn" role="status" hidden></ul>
             </div>
 
             <div class="modal-footer">
@@ -734,6 +749,8 @@
                     <span id="han-current-han">適用中: 1翻</span>
                 </div>
 
+                <ul class="fu-warn" id="han-warn" role="status" hidden></ul>
+
                 <h3 class="fu-section-title">1翻</h3>
                 <div class="chips" id="yaku-1"></div>
                 <h3 class="fu-section-title">2翻</h3>
@@ -746,8 +763,6 @@
 
                 <h3 class="fu-section-title">役満</h3>
                 <div class="chips" id="yaku-man"></div>
-
-                <ul class="fu-warn" id="han-warn" role="status" hidden></ul>
             </div>
 
             <div class="modal-footer">
@@ -1423,7 +1438,8 @@
 
           const warns = [];
           if (r.yakuman) {
-              warns.push('役満を選んでいるため、通常役とドラは加算しません。');
+              warns.push(`役満（${r.list.join('・')}）を選んでいるため、通常役とドラは選べません。` +
+                  '<br><button type="button" class="warn-action" onclick="clearYakuman()">役満の選択を解除する</button>');
           } else {
               if (!state.menzen) warns.push('鳴いているため、門前限定役は選べません。三色・一通・混一色などは食い下がり後の翻数で計算しています。');
               if (!r.hasYaku) warns.push('役が選ばれていません。ドラだけでは和了できないため反映できません。');
@@ -1638,6 +1654,11 @@
                   if (pair[1] === id) hanState.yakuman[pair[0]] = false;
               });
           }
+          commit();
+      }
+
+      function clearYakuman() {
+          hanState.yakuman = {};
           commit();
       }
 
