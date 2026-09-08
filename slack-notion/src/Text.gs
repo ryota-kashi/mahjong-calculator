@@ -106,6 +106,21 @@ function formatSlackTimestamp_(ts, timeZone, formatter) {
 }
 
 /**
+ * 本文中でメンションされているSlackユーザーIDを、出てきた順に返す。
+ * @param {string} text Slackの生の本文（<@U123> を含む）。
+ * @return {!Array<string>}
+ */
+function extractMentionedUserIds_(text) {
+  var ids = [];
+  var pattern = /<@([UW][A-Z0-9]+)(?:\|[^>]*)?>/g;
+  var matched;
+  while ((matched = pattern.exec(String(text || '')))) {
+    if (ids.indexOf(matched[1]) === -1) ids.push(matched[1]);
+  }
+  return ids;
+}
+
+/**
  * JSON.parse の例外を握りつぶす版。
  * @param {string} text
  * @return {?Object}

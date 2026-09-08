@@ -12,6 +12,9 @@ var PROP_KEYS = {
   databaseAllowlist: 'NOTION_DATABASE_ALLOWLIST',
   urlPropertyName: 'NOTION_URL_PROPERTY',
   duePropertyName: 'NOTION_DUE_PROPERTY',
+  assigneePropertyName: 'NOTION_ASSIGNEE_PROPERTY',
+  priorityPropertyName: 'NOTION_PRIORITY_PROPERTY',
+  notionUserCache: 'NOTION_USER_CACHE',
   geminiApiKey: 'GEMINI_API_KEY',
   geminiModel: 'GEMINI_MODEL',
   geminiThinkingBudget: 'GEMINI_THINKING_BUDGET',
@@ -44,6 +47,14 @@ var SETTINGS_MODAL_CALLBACK_ID = 'save_notion_databases';
 var SETTINGS_BLOCK_ID = 'databases';
 var SETTINGS_ACTION_ID = 'databases_select';
 var OPEN_SETTINGS_ACTION_ID = 'open_settings';
+
+/** 作成後の修正モーダル。 */
+var EDIT_ACTION_ID = 'edit_task';
+var EDIT_MODAL_CALLBACK_ID = 'edit_notion_task';
+var EDIT_TITLE_BLOCK_ID = 'task_title';
+var EDIT_TITLE_ACTION_ID = 'task_title_input';
+var EDIT_DUE_BLOCK_ID = 'task_due';
+var EDIT_DUE_ACTION_ID = 'task_due_input';
 
 /** 利用者ごとの登録内容を入れるスクリプトプロパティの接頭辞。 */
 var USER_PROPERTY_PREFIX = 'USER_DATABASES_';
@@ -87,10 +98,13 @@ function readConfig_(props) {
     databaseAllowlist: allowlist,
     urlPropertyName: String(props[PROP_KEYS.urlPropertyName] || '').trim(),
     duePropertyName: String(props[PROP_KEYS.duePropertyName] || '').trim(),
+    assigneePropertyName: String(props[PROP_KEYS.assigneePropertyName] || '').trim(),
+    priorityPropertyName: String(props[PROP_KEYS.priorityPropertyName] || '').trim(),
     geminiApiKey: String(props[PROP_KEYS.geminiApiKey] || '').trim(),
     geminiModel: String(props[PROP_KEYS.geminiModel] || '').trim() || DEFAULT_GEMINI_MODEL,
     geminiThinkingBudget: readThinkingBudget_(props[PROP_KEYS.geminiThinkingBudget]),
     databaseCacheRaw: props[PROP_KEYS.databaseCache] || '',
+    notionUserCacheRaw: props[PROP_KEYS.notionUserCache] || '',
     // 利用者ごとの登録内容を引くために、読み込んだプロパティをそのまま持っておく。
     // doPost で1回だけ読むので、ここから引く限り追加の呼び出しは発生しない。
     properties: props

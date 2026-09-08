@@ -40,6 +40,18 @@ const DB_TASKS = {
     'ステータス': { type: 'status' }
   }
 };
+const DB_FULL = {
+  object: 'database',
+  id: 'cccccccc-dddd-eeee-ffff-000000000000',
+  url: 'https://www.notion.so/full',
+  title: [{ plain_text: 'チームタスク' }],
+  properties: {
+    'Name': { type: 'title' },
+    '期限': { type: 'date' },
+    '担当者': { type: 'people' },
+    '優先度': { type: 'select', select: { options: [{ name: '高' }, { name: '中' }, { name: '低' }] } }
+  }
+};
 const DB_NOTES = {
   object: 'database',
   id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -66,6 +78,22 @@ const DEFAULT_PROPERTIES = {
   SLACK_VERIFICATION_TOKEN: 'verify-me',
   NOTION_TOKEN: 'ntn_test',
   GEMINI_API_KEY: 'gemini-test-key'
+};
+
+/** Notion のワークスペースメンバー（メールで突き合わせる）。 */
+const NOTION_USERS = [
+  { object: 'user', id: 'notion-taro', type: 'person', name: '田中太郎',
+    person: { email: 'taro@example.com' } },
+  { object: 'user', id: 'notion-me', type: 'person', name: '池上翔輝',
+    person: { email: 'me@example.com' } },
+  { object: 'user', id: 'notion-bot', type: 'bot', name: 'Bot', bot: {} }
+];
+
+/** Slack のユーザー情報（users.info の応答）。 */
+const SLACK_USERS = {
+  U111: { profile: { display_name: '池上翔輝', email: 'me@example.com' } },
+  U222: { profile: { display_name: '田中太郎', email: 'taro@example.com' } },
+  U333: { profile: { display_name: '外部の人', email: 'outside@example.com' } }
 };
 
 /** Gemini が返す既定の抽出結果。 */
@@ -99,11 +127,22 @@ function createApp(options = {}) {
       return respond(200, { ok: true });
     }
     if (url.endsWith('/api/users.info')) {
-      return respond(200, { ok: true, user: { profile: { display_name: '池上翔輝' } } });
+      const id = (request && request.payload && request.payload.user) || '';
+      const user = SLACK_USERS[id] || { profile: { display_name: '池上翔輝' } };
+      return respond(200, { ok: true, user: user });
     }
     if (url.endsWith('/v1/search')) return respond(200, { results: databases, has_more: false });
+    if (url.includes('/v1/users')) {
+      return respond(200, { results: options.notionUsers || NOTION_USERS, has_more: false });
+    }
+    if (url.includes('/v1/pages/')) {
+      return respond(200, { id: 'page-1', url: 'https://www.notion.so/created-page' });
+    }
     if (url.endsWith('/v1/pages')) {
-      return respond(200, { url: 'https://www.notion.so/created-page' });
+      return respond(200, { id: 'page-1', url: 'https://www.notion.so/created-page' });
+    }
+    if (url.endsWith('/api/conversations.replies')) {
+      return respond(200, { ok: true, messages: options.threadMessages || [] });
     }
     if (url.includes('generativelanguage.googleapis.com')) {
       return respond(200, geminiResponse(extraction));
@@ -135,7 +174,9 @@ function createApp(options = {}) {
     },
     UrlFetchApp: {
       fetch: (url, request) => {
-        const parsed = request && request.payload ? JSON.parse(request.payload) : null;
+        // JSONで送る呼び出しと、フォーム形式（オブジェクト）で送る呼び出しの両方がある。
+        const body = request && request.payload;
+        const parsed = typeof body === 'string' ? JSON.parse(body) : (body || null);
         requests.push({ url, request, payload: parsed });
         const response = handler(url, request, parsed);
         if (response instanceof Error) throw response;
@@ -990,7 +1031,333 @@ function createAppRegistered(databaseIds, options) {
     swept.triggers.filter((trigger) => trigger.handlerName === 'runQueuedTasksNow').length, 0);
 }
 
-// ---- 24. 定数の突き合わせ（マニフェストとコード） ----
+// ---- 24. 担当者と優先度の列の検出 ----
+{
+  const app = createApp();
+  const summarize = (database, options) => app.call('summarizeDatabase_', database, options || {});
+
+  const full = summarize(DB_FULL);
+  check('people列を担当者として見つける', full.assigneeProperty, '担当者');
+  check('優先度列と選択肢を読む', full.priorityProperty,
+    { name: '優先度', type: 'select', options: ['高', '中', '低'] });
+
+  const status = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' },
+    'Priority': { type: 'status', status: { options: [{ name: 'Urgent' }, { name: 'Normal' }] } }
+  } });
+  check('status型の優先度列も扱う', status.priorityProperty,
+    { name: 'Priority', type: 'status', options: ['Urgent', 'Normal'] });
+
+  const singlePeople = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' }, 'メンバー': { type: 'people' }
+  } });
+  check('people列が1つだけならそれを担当者にする', singlePeople.assigneeProperty, 'メンバー');
+
+  const twoPeople = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' }, 'レビュアー': { type: 'people' }, '報告先': { type: 'people' }
+  } });
+  check('people列が複数で名前も曖昧なら決めない', twoPeople.assigneeProperty, '');
+
+  const explicit = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' }, 'レビュアー': { type: 'people' }, '報告先': { type: 'people' }
+  } }, { assigneePropertyName: '報告先' });
+  check('NOTION_ASSIGNEE_PROPERTY の指定を優先', explicit.assigneeProperty, '報告先');
+
+  const noOptions = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' }, '優先度': { type: 'select', select: { options: [] } }
+  } });
+  ok('選択肢のない優先度列は使わない', !noOptions.priorityProperty);
+
+  // ページ本体
+  const payload = app.call('buildNotionPagePayload_', full, {
+    title: '請求書を送る', text: '', dueDate: '2024-06-07',
+    priority: '高', assigneeNotionUserId: 'notion-taro', assigneeName: '田中太郎'
+  });
+  check('担当者はpeople列に入れる', payload.properties['担当者'],
+    { people: [{ object: 'user', id: 'notion-taro' }] });
+  check('優先度はselectとして入れる', payload.properties['優先度'], { select: { name: '高' } });
+  ok('本文にも担当と優先度を残す',
+    JSON.stringify(payload.children).includes('優先度: 高') &&
+    JSON.stringify(payload.children).includes('担当: 田中太郎'),
+    JSON.stringify(payload.children));
+
+  const statusPayload = app.call('buildNotionPagePayload_', status,
+    { title: 'x', text: '', priority: 'Urgent' });
+  check('status型はstatusとして入れる', statusPayload.properties['Priority'],
+    { status: { name: 'Urgent' } });
+}
+
+// ---- 25. 担当者の割り当て ----
+{
+  const mentionPayload = messageActionPayload({
+    user: { id: 'U111' },
+    message: { ts: '1717000000.123456', user: 'U111', text: '<@U222> 請求書を今週中にお願いします' }
+  });
+
+  const app = createApp({
+    databases: [DB_FULL],
+    extraction: { title: '請求書を送る', dueDate: '2024-06-07', assignee: 'U222', priority: '高' }
+  });
+  register(app, [DB_FULL.id], 'U111');
+  const view = openTaskModal(app, mentionPayload);
+  app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+  app.runQueue();
+
+  const created = app.notionPages()[0].payload;
+  check('AIが選んだ担当者をNotionユーザーに変換する', created.properties['担当者'],
+    { people: [{ object: 'user', id: 'notion-taro' }] });
+  check('優先度も入る', created.properties['優先度'], { select: { name: '高' } });
+
+  const prompt = app.geminiRequests()[0].payload.contents[0].parts[0].text;
+  ok('メンションされた人を候補に挙げる', prompt.includes('U222'), prompt);
+  ok('追加した人も候補に挙げる', prompt.includes('U111'));
+  ok('優先度の選択肢を渡す', prompt.includes('高 / 中 / 低'));
+  const schema = app.geminiRequests()[0].payload.generationConfig.responseSchema;
+  check('担当者は候補IDに絞る', schema.properties.assignee.enum, ['U222', 'U111', '']);
+  check('優先度も選択肢に絞る', schema.properties.priority.enum, ['高', '中', '低', '']);
+
+  // AIが選ばなくてもメンションされた人に割り当てる
+  const noPick = createApp({
+    databases: [DB_FULL],
+    extraction: { title: '請求書を送る', dueDate: '', assignee: '', priority: '' }
+  });
+  register(noPick, [DB_FULL.id], 'U111');
+  const noPickView = openTaskModal(noPick, mentionPayload);
+  noPick.call('doPost', postEvent(viewSubmissionPayload(noPickView.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+  noPick.runQueue();
+  check('AIが選ばなければメンションされた人',
+    noPick.notionPages()[0].payload.properties['担当者'],
+    { people: [{ object: 'user', id: 'notion-taro' }] });
+
+  // メンションがなければ追加した人
+  const noMention = createApp({
+    databases: [DB_FULL],
+    extraction: { title: '請求書を送る', dueDate: '', assignee: '', priority: '' }
+  });
+  register(noMention, [DB_FULL.id], 'U111');
+  const plain = messageActionPayload({
+    user: { id: 'U111' },
+    message: { ts: '1717000000.123456', user: 'U111', text: '請求書を送る' }
+  });
+  const noMentionView = openTaskModal(noMention, plain);
+  noMention.call('doPost', postEvent(viewSubmissionPayload(noMentionView.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+  noMention.runQueue();
+  check('メンションがなければ追加した人',
+    noMention.notionPages()[0].payload.properties['担当者'],
+    { people: [{ object: 'user', id: 'notion-me' }] });
+
+  // Notionに同じメールの人がいなければ空のまま
+  const unknown = createApp({
+    databases: [DB_FULL],
+    extraction: { title: 'x', dueDate: '', assignee: 'U333', priority: '' }
+  });
+  register(unknown, [DB_FULL.id], 'U333');
+  const unknownView = openTaskModal(unknown, messageActionPayload({
+    user: { id: 'U333' },
+    message: { ts: '1717000000.123456', user: 'U333', text: '<@U333> これお願い' }
+  }));
+  unknown.call('doPost', postEvent(viewSubmissionPayload(unknownView.private_metadata, DB_FULL.id, {
+    user: { id: 'U333' }
+  })));
+  unknown.runQueue();
+  ok('突き合わせられなければ担当者を空にする',
+    unknown.notionPages()[0].payload.properties['担当者'] === undefined);
+  ok('それでもページは作る', unknown.notionPages().length === 1);
+
+  // 担当者列がなければ候補も集めない
+  const noColumn = createApp();
+  register(noColumn, [DB_TASKS.id], 'U111');
+  const noColumnView = openTaskModal(noColumn, mentionPayload);
+  noColumn.call('doPost', postEvent(viewSubmissionPayload(noColumnView.private_metadata, DB_TASKS.id, {
+    user: { id: 'U111' }
+  })));
+  noColumn.runQueue();
+  const noColumnSchema = noColumn.geminiRequests()[0].payload.generationConfig.responseSchema;
+  ok('担当者列がなければ項目自体を出さない',
+    noColumnSchema.properties.assignee === undefined &&
+    noColumnSchema.properties.priority === undefined,
+    JSON.stringify(Object.keys(noColumnSchema.properties)));
+}
+
+// ---- 26. スレッド全体の取り込み ----
+{
+  const threadMessages = [
+    { user: 'U111', ts: '1717000000.100000', text: '来週のリリース準備どうなってる？' },
+    { user: 'U222', ts: '1717000000.110000', text: '<@U111> リグレッションテストがまだです' },
+    { user: 'U111', ts: '1717000000.120000', text: 'では金曜までにお願いします' }
+  ];
+  const app = createApp({ databases: [DB_FULL], threadMessages });
+  register(app, [DB_FULL.id], 'U111');
+  const threadReply = messageActionPayload({
+    user: { id: 'U111' },
+    message: {
+      ts: '1717000000.120000', user: 'U111', thread_ts: '1717000000.100000',
+      text: 'では金曜までにお願いします'
+    }
+  });
+  const view = openTaskModal(app, threadReply);
+  app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+
+  check('スレッド取得は送信時にはやらない',
+    app.urls().filter((url) => url.endsWith('/api/conversations.replies')).length, 0);
+  app.runQueue();
+
+  const replies = app.requests.filter((request) => request.url.endsWith('/api/conversations.replies'));
+  check('スレッドを1回だけ取りに行く', replies.length, 1);
+  check('親のtsで取る', replies[0].request.payload.ts, '1717000000.100000');
+  check('フォーム形式で送る', typeof replies[0].request.payload, 'object');
+
+  const prompt = app.geminiRequests()[0].payload.contents[0].parts[0].text;
+  ok('会話全体をAIに渡す',
+    prompt.includes('リグレッションテストがまだです') && prompt.includes('来週のリリース準備'),
+    prompt);
+  ok('発言者の名前を付ける', prompt.includes('田中太郎: '), prompt);
+
+  const created = app.notionPages()[0].payload;
+  ok('本文にも会話全体を残す',
+    JSON.stringify(created.children).includes('リグレッションテストがまだです'));
+  ok('スレッドの件数を書く', JSON.stringify(created.children).includes('スレッド: 3件'));
+
+  // 取得に失敗しても元のメッセージだけで続ける
+  const denied = createApp({
+    databases: [DB_FULL],
+    fetch: (url, request) => {
+      if (url.endsWith('/api/conversations.replies')) {
+        return {
+          getResponseCode: () => 200,
+          getContentText: () => JSON.stringify({ ok: false, error: 'not_in_channel' })
+        };
+      }
+      if (url.endsWith('/v1/search')) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ results: [DB_FULL] }) };
+      }
+      if (url.includes('/v1/users')) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ results: NOTION_USERS }) };
+      }
+      if (url.endsWith('/v1/pages')) {
+        return {
+          getResponseCode: () => 200,
+          getContentText: () => JSON.stringify({ id: 'page-1', url: 'https://www.notion.so/created-page' })
+        };
+      }
+      if (url.includes('generativelanguage.googleapis.com')) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify(geminiResponse(DEFAULT_EXTRACTION)) };
+      }
+      return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ ok: true }) };
+    }
+  });
+  register(denied, [DB_FULL.id], 'U111');
+  const deniedView = openTaskModal(denied, threadReply);
+  denied.call('doPost', postEvent(viewSubmissionPayload(deniedView.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+  denied.runQueue();
+  check('スレッドが読めなくてもページは作る', denied.notionPages().length, 1);
+  ok('元のメッセージだけで作る',
+    JSON.stringify(denied.notionPages()[0].payload.children).includes('では金曜までに'));
+  ok('理由をログに残す',
+    denied.logs.some((line) => line.includes('not_in_channel')), denied.logs.join('|'));
+
+  // スレッドでないメッセージでは取りに行かない
+  const single = createAppRegistered([DB_TASKS.id]);
+  const singleView = openTaskModal(single);
+  single.call('doPost', postEvent(viewSubmissionPayload(singleView.private_metadata, DB_TASKS.id)));
+  single.runQueue();
+  check('スレッド外なら取得しない',
+    single.urls().filter((url) => url.endsWith('/api/conversations.replies')).length, 0);
+}
+
+// ---- 27. 作成後の修正 ----
+{
+  const app = createAppRegistered([DB_TASKS.id]);
+  const view = openTaskModal(app);
+  app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_TASKS.id)));
+  app.runQueue();
+
+  const done = app.notifications().slice(-1)[0].payload;
+  const button = done.blocks.find((block) => block.type === 'actions').elements[0];
+  check('完了通知に修正ボタンを付ける', button.action_id, 'edit_task');
+  const target = JSON.parse(button.value);
+  check('ページIDを持たせる', target.p, 'page-1');
+  check('現在のタスク名も持たせる', target.t, '請求書の締め切りを確認する');
+  ok('ボタンのvalueは2000文字以内', button.value.length <= 2000);
+
+  // ボタンを押すと修正モーダルが開く
+  app.call('doPost', postEvent(blockActionsPayload('edit_task', {
+    actions: [{ type: 'button', action_id: 'edit_task', value: button.value }],
+    response_url: 'https://hooks.slack.com/actions/T1/2/xyz'
+  })));
+  const modal = lastOpenedView(app);
+  check('修正モーダルを開く', modal.callback_id, 'edit_notion_task');
+  const titleInput = modal.blocks.find((block) => block.block_id === 'task_title').element;
+  check('タスク名を初期値にする', titleInput.initial_value, '請求書の締め切りを確認する');
+  const dueInput = modal.blocks.find((block) => block.block_id === 'task_due').element;
+  check('期限も初期値にする', dueInput.initial_date, '2024-06-07');
+
+  // 保存すると Notion が更新される
+  const editSubmission = {
+    type: 'view_submission',
+    token: 'verify-me',
+    user: { id: 'U999' },
+    view: {
+      callback_id: 'edit_notion_task',
+      private_metadata: modal.private_metadata,
+      state: { values: {
+        task_title: { task_title_input: { type: 'plain_text_input', value: '請求書を再送する' } },
+        task_due: { task_due_input: { type: 'datepicker', selected_date: '2024-06-10' } }
+      } }
+    }
+  };
+  const saved = app.call('doPost', postEvent(editSubmission));
+  check('モーダルは閉じる', saved.getContent(), '');
+  const patched = app.requests.filter((request) => request.request.method === 'patch');
+  check('ページを1回更新する', patched.length, 1);
+  ok('PATCH先はそのページ', patched[0].url.endsWith('/v1/pages/page-1'), patched[0].url);
+  check('タスク名を書き換える',
+    patched[0].payload.properties['名前'].title[0].text.content, '請求書を再送する');
+  check('期限も書き換える', patched[0].payload.properties['期限'], { date: { start: '2024-06-10' } });
+  ok('結果を知らせる',
+    app.notifications().slice(-1)[0].payload.text.includes('請求書を再送する'),
+    app.notifications().slice(-1)[0].payload.text);
+
+  // 期限を空にすると消える
+  editSubmission.view.state.values.task_due.task_due_input = { type: 'datepicker' };
+  app.call('doPost', postEvent(editSubmission));
+  const cleared = app.requests.filter((request) => request.request.method === 'patch').slice(-1)[0];
+  check('期限を空にすると消せる', cleared.payload.properties['期限'], { date: null });
+
+  // タスク名が空なら弾く
+  editSubmission.view.state.values.task_title.task_title_input = { type: 'plain_text_input', value: '   ' };
+  const rejected = app.call('doPost', postEvent(editSubmission));
+  const body = JSON.parse(rejected.getContent());
+  check('空のタスク名はエラーにする', body.response_action, 'errors');
+  check('エラーはタスク名欄に出す', Object.keys(body.errors), ['task_title']);
+  check('更新もしない',
+    app.requests.filter((request) => request.request.method === 'patch').length, 2);
+
+  // 日付列がないデータベースでは期限欄を出さない
+  const notes = createAppRegistered([DB_NOTES.id]);
+  const notesView = openTaskModal(notes);
+  notes.call('doPost', postEvent(viewSubmissionPayload(notesView.private_metadata, DB_NOTES.id)));
+  notes.runQueue();
+  const notesButton = notes.notifications().slice(-1)[0].payload.blocks
+    .find((block) => block.type === 'actions').elements[0];
+  notes.call('doPost', postEvent(blockActionsPayload('edit_task', {
+    actions: [{ type: 'button', action_id: 'edit_task', value: notesButton.value }]
+  })));
+  ok('日付列がなければ期限欄なし',
+    !lastOpenedView(notes).blocks.some((block) => block.block_id === 'task_due'));
+}
+
+// ---- 28. 定数の突き合わせ（マニフェストとコード） ----
 {
   const app = createApp();
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'slack-notion', 'slack-app-manifest.json'), 'utf8'));
@@ -1003,7 +1370,13 @@ function createAppRegistered(databaseIds, options) {
   check('設定ショートカットのcallback_id',
     global.callback_id, vm.runInContext('SETTINGS_SHORTCUT_CALLBACK_ID', app.context));
   ok('interactivity が有効', manifest.settings.interactivity.is_enabled === true);
-  ok('users:read を要求する', manifest.oauth_config.scopes.bot.includes('users:read'));
+  const scopes = manifest.oauth_config.scopes.bot;
+  ok('users:read を要求する', scopes.includes('users:read'));
+  ok('担当者の突き合わせに users:read.email を要求する', scopes.includes('users:read.email'));
+  ok('スレッド取得に履歴スコープを要求する',
+    ['channels:history', 'groups:history', 'im:history', 'mpim:history']
+      .every((scope) => scopes.includes(scope)),
+    scopes.join(', '));
 }
 
 // ---- 結果 ----

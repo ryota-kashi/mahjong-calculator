@@ -92,6 +92,64 @@ function refreshDatabases_(config) {
   return result;
 }
 
+var NOTION_USER_CACHE_KEY = 'notion_users';
+
+/**
+ * Notionのワークスペースメンバーを返す。
+ * データベース一覧と同じく、キャッシュ → プロパティ → API の順に見る。
+ * @param {!Object} config
+ * @return {!Array<!Object>}
+ */
+function getNotionUsers_(config) {
+  var cached = readCache_(NOTION_USER_CACHE_KEY);
+  if (cached && cached.users) return cached.users;
+
+  var stored = safeJsonParse_(config.notionUserCacheRaw);
+  if (stored && stored.users) {
+    writeCache_(NOTION_USER_CACHE_KEY, stored, DATABASE_CACHE_TTL_SECONDS);
+    return stored.users;
+  }
+  return refreshNotionUsers_(config).users;
+}
+
+/**
+ * Notionのメンバー一覧を取り直してキャッシュする。
+ * @param {!Object} config
+ * @return {{ok: boolean, error: string, users: !Array<!Object>}}
+ */
+function refreshNotionUsers_(config) {
+  var result = searchNotionUsers_(config);
+  if (!result.ok) {
+    logError_('Notionのメンバー取得に失敗: ' + result.error, null);
+    return result;
+  }
+  var snapshot = { updatedAt: new Date().toISOString(), users: result.users };
+  writeCache_(NOTION_USER_CACHE_KEY, snapshot, DATABASE_CACHE_TTL_SECONDS);
+  try {
+    PropertiesService.getScriptProperties()
+        .setProperty(PROP_KEYS.notionUserCache, JSON.stringify(snapshot));
+  } catch (err) {
+    logError_('メンバー一覧の保存に失敗', err);
+  }
+  return result;
+}
+
+/**
+ * メールアドレスからNotionのユーザーIDを引く。
+ * @param {!Object} config
+ * @param {string} email
+ * @return {?Object} {id, email, name}
+ */
+function findNotionUserByEmail_(config, email) {
+  var target = String(email || '').trim().toLowerCase();
+  if (!target) return null;
+  var users = getNotionUsers_(config);
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].email === target) return users[i];
+  }
+  return null;
+}
+
 /**
  * @param {!Array<!Object>} databases
  * @param {string} normalizedId

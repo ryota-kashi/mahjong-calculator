@@ -124,26 +124,58 @@ function processJob_(config, job) {
   }
 
   var cached = readCache_(String(job.k || '')) || {};
+  var messageText = String(cached.text || job.th || '');
   var task = {
     title: String(job.t || 'Slackメッセージ'),
-    text: String(cached.text || job.th || ''),
+    text: messageText,
+    rawText: messageText,
+    threadCount: 0,
     permalink: String(job.u || ''),
     channelName: String(job.c || ''),
     authorName: String(job.n || '') || lookupUserName_(config, String(job.a || '')),
     postedAt: String(job.d || ''),
-    dueDate: ''
+    dueDate: '',
+    priority: '',
+    assigneeName: '',
+    assigneeNotionUserId: ''
   };
+
+  // スレッド内のメッセージなら、会話全体を読んで判断する。
+  if (job.tt) {
+    var messages = fetchThreadMessages_(config, String(job.ch || ''), String(job.tt || ''));
+    if (messages) {
+      var thread = buildThreadTranscript_(config, messages);
+      if (thread.count > 1) {
+        task.text = thread.transcript;
+        task.rawText = thread.raw;
+        task.threadCount = thread.count;
+      }
+    }
+  }
+
+  // 追加先に該当する列があるときだけ、担当者と優先度も読み取らせる。
+  var candidates = database.assigneeProperty
+      ? buildAssigneeCandidates_(config, task.rawText, job)
+      : [];
+  var priorityOptions = (database.priorityProperty || {}).options || [];
 
   // AIが使えないときや読み取れなかったときは、本文の1行目をそのまま使う。
   var extracted = extractTaskFields_(config, {
     text: task.text,
     postedAt: task.postedAt,
     channelName: task.channelName,
-    authorName: task.authorName
+    authorName: task.authorName,
+    assigneeCandidates: candidates,
+    priorityOptions: priorityOptions
   });
   if (extracted.ok) {
     if (extracted.title) task.title = extracted.title;
     task.dueDate = extracted.dueDate;
+    task.priority = extracted.priority;
+  }
+
+  if (database.assigneeProperty) {
+    applyAssignee_(config, task, extracted.assignee || defaultAssigneeId_(candidates, job));
   }
 
   var result = createNotionTask_(config, database, task);
@@ -151,7 +183,79 @@ function processJob_(config, job) {
     postToResponseUrl_(job.r, '⚠️ Notionへの追加に失敗しました: ' + result.error);
     return;
   }
-  postToResponseUrl_(job.r, buildSuccessMessage_(database, task, result.url));
+  var message = buildSuccessMessage_(database, task, result.url);
+  postToResponseUrl_(job.r, message, buildCreatedBlocks_(message, {
+    pageId: result.pageId,
+    databaseId: database.id,
+    title: task.title,
+    dueDate: task.dueDate
+  }));
+}
+
+/**
+ * 担当者になりうる人を、メンション → 投稿者 → 追加した人の順に並べる。
+ * @param {!Object} config
+ * @param {string} rawText Slackの生の本文。
+ * @param {!Object} job
+ * @return {!Array<{id: string, name: string, role: string}>}
+ */
+function buildAssigneeCandidates_(config, rawText, job) {
+  var mentioned = extractMentionedUserIds_(rawText);
+  var entries = mentioned.map(function (id) {
+    return { id: id, role: 'メンションされた人' };
+  });
+  addCandidate_(entries, String(job.a || ''), 'メッセージの投稿者');
+  addCandidate_(entries, String(job.uid || ''), 'タスクを追加した人');
+
+  return entries.slice(0, 5).map(function (entry) {
+    return { id: entry.id, name: lookupUserName_(config, entry.id), role: entry.role };
+  });
+}
+
+/**
+ * @param {!Array<!Object>} entries
+ * @param {string} id
+ * @param {string} role
+ */
+function addCandidate_(entries, id, role) {
+  if (!id) return;
+  for (var i = 0; i < entries.length; i++) {
+    if (entries[i].id === id) return;
+  }
+  entries.push({ id: id, role: role });
+}
+
+/**
+ * AIが選ばなかったときの担当者。名指しされた人がいればその人、いなければ追加した人。
+ * @param {!Array<!Object>} candidates
+ * @param {!Object} job
+ * @return {string}
+ */
+function defaultAssigneeId_(candidates, job) {
+  for (var i = 0; i < candidates.length; i++) {
+    if (candidates[i].role === 'メンションされた人') return candidates[i].id;
+  }
+  return String(job.uid || '');
+}
+
+/**
+ * SlackユーザーIDをメールアドレス経由でNotionのメンバーに突き合わせる。
+ * 突き合わせられなければ担当者は空のままにする。
+ * @param {!Object} config
+ * @param {!Object} task 書き換える対象。
+ * @param {string} slackUserId
+ */
+function applyAssignee_(config, task, slackUserId) {
+  if (!slackUserId) return;
+  var email = lookupUserEmail_(config, slackUserId);
+  if (!email) return;
+  var notionUser = findNotionUserByEmail_(config, email);
+  if (!notionUser) {
+    logError_('Notionに同じメールのメンバーがいません: ' + email, null);
+    return;
+  }
+  task.assigneeNotionUserId = notionUser.id;
+  task.assigneeName = notionUser.name || lookupUserName_(config, slackUserId);
 }
 
 /**

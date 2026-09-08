@@ -123,6 +123,8 @@ function handleMessageAction_(config, payload) {
     t: buildTaskTitle_(text, defaultTaskTitle_(channel.name, postedAt)),
     u: buildPermalink_(team.domain, channel.id, message.ts, message.thread_ts),
     c: String(channel.name || ''),
+    ch: String(channel.id || ''),
+    tt: String(message.thread_ts || ''),
     a: String(message.user || ''),
     n: String(message.username || ''),
     d: postedAt,
@@ -178,13 +180,43 @@ function handleGlobalShortcut_(config, payload) {
  */
 function handleBlockActions_(config, payload) {
   var actions = payload.actions || [];
-  var opensSettings = actions.some(function (action) {
-    return action && action.action_id === OPEN_SETTINGS_ACTION_ID;
-  });
-  if (!opensSettings || !payload.trigger_id) return textResponse_('');
+  if (!payload.trigger_id) return textResponse_('');
 
-  var pushed = pushModal_(config, payload.trigger_id, settingsViewFor_(config, userId_(payload)));
-  if (!pushed.ok) logError_('views.push に失敗: ' + pushed.error, null);
+  for (var i = 0; i < actions.length; i++) {
+    var action = actions[i] || {};
+    if (action.action_id === OPEN_SETTINGS_ACTION_ID) {
+      var pushed = pushModal_(config, payload.trigger_id,
+          settingsViewFor_(config, userId_(payload)));
+      if (!pushed.ok) logError_('views.push に失敗: ' + pushed.error, null);
+      return textResponse_('');
+    }
+    if (action.action_id === EDIT_ACTION_ID) {
+      return openEditModal_(config, payload, action);
+    }
+  }
+  return textResponse_('');
+}
+
+/**
+ * 作成したタスクを直すモーダルを開く。
+ * @param {!Object} config
+ * @param {!Object} payload
+ * @param {!Object} action 押されたボタン。
+ * @return {!Object}
+ */
+function openEditModal_(config, payload, action) {
+  var target = safeJsonParse_(action.value) || {};
+  if (!target.p) return textResponse_('');
+
+  var database = pickDatabase_(getDatabases_(config), normalizeNotionId_(String(target.d || '')));
+  var opened = openModal_(config, payload.trigger_id, buildEditModal_({
+    pageId: String(target.p),
+    databaseId: String(target.d || ''),
+    title: String(target.t || ''),
+    dueDate: String(target.u || ''),
+    responseUrl: String(payload.response_url || '')
+  }, !!(database && database.dueProperty)));
+  if (!opened.ok) logError_('修正モーダルを開けませんでした: ' + opened.error, null);
   return textResponse_('');
 }
 
@@ -215,6 +247,9 @@ function handleViewSubmission_(config, payload) {
   var view = payload.view || {};
   if (view.callback_id === SETTINGS_MODAL_CALLBACK_ID) {
     return handleSettingsSubmission_(config, payload);
+  }
+  if (view.callback_id === EDIT_MODAL_CALLBACK_ID) {
+    return handleEditSubmission_(config, payload);
   }
   if (view.callback_id !== MODAL_CALLBACK_ID) return textResponse_('');
   return handleTaskSubmission_(config, payload);
@@ -251,6 +286,60 @@ function handleSettingsSubmission_(config, payload) {
 }
 
 /**
+ * 修正モーダルの保存。Notionのページを書き換えるだけなので、その場で処理する。
+ * @param {!Object} config
+ * @param {!Object} payload
+ * @return {!Object}
+ */
+function handleEditSubmission_(config, payload) {
+  var view = payload.view || {};
+  var target = safeJsonParse_(view.private_metadata) || {};
+  var edited = readEditedTask_(view);
+
+  if (!target.p) return textResponse_('');
+  if (!edited.title) {
+    var errors = {};
+    errors[EDIT_TITLE_BLOCK_ID] = 'タスク名を入力してください。';
+    return jsonResponse_({ response_action: 'errors', errors: errors });
+  }
+
+  var database = pickDatabase_(getDatabases_(config), normalizeNotionId_(String(target.d || '')));
+  if (!database) {
+    var missing = {};
+    missing[EDIT_TITLE_BLOCK_ID] = '追加先のデータベースが見つかりませんでした。';
+    return jsonResponse_({ response_action: 'errors', errors: missing });
+  }
+
+  var properties = {};
+  properties[database.titleProperty] = {
+    title: [{ type: 'text', text: { content: truncate_(edited.title, TITLE_MAX_LENGTH) } }]
+  };
+  if (database.dueProperty) {
+    properties[database.dueProperty] = edited.dueDate
+        ? { date: { start: edited.dueDate } }
+        : { date: null };
+  }
+
+  var result;
+  try {
+    result = updateNotionPage_(config, String(target.p), properties);
+  } catch (err) {
+    logError_('Notionページの更新で例外', err);
+    result = { ok: false, error: '通信に失敗しました', url: '' };
+  }
+  if (!result.ok) {
+    var failed = {};
+    failed[EDIT_TITLE_BLOCK_ID] = '更新に失敗しました: ' + truncate_(result.error, 300);
+    return jsonResponse_({ response_action: 'errors', errors: failed });
+  }
+
+  postToResponseUrl_(String(target.r || ''),
+      '✏️ 「' + edited.title + '」に更新しました。' +
+      (edited.dueDate ? '（期限: ' + edited.dueDate + '）' : '（期限なし）'));
+  return textResponse_('');
+}
+
+/**
  * タスク追加モーダルの送信。ここでNotionにページを作る。
  * @param {!Object} config
  * @param {!Object} payload
@@ -279,6 +368,8 @@ function handleTaskSubmission_(config, payload) {
     th: truncate_(String((readCache_(String(metadata.k || '')) || {}).text || ''), 1000),
     u: String(metadata.u || ''),
     c: String(metadata.c || ''),
+    ch: String(metadata.ch || ''),
+    tt: String(metadata.tt || ''),
     a: String(metadata.a || ''),
     n: String(metadata.n || ''),
     d: String(metadata.d || ''),

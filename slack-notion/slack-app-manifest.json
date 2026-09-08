@@ -28,7 +28,12 @@
     "scopes": {
       "bot": [
         "commands",
-        "users:read"
+        "users:read",
+        "users:read.email",
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history"
       ]
     }
   },

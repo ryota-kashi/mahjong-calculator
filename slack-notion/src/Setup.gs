@@ -28,6 +28,8 @@ function showSetupStatus() {
       (config.databaseAllowlist.length ? config.databaseAllowlist.length + '件' : '未設定（全件）'));
   lines.push(PROP_KEYS.urlPropertyName + ': ' + (config.urlPropertyName || '未設定（自動判定）'));
   lines.push(PROP_KEYS.duePropertyName + ': ' + (config.duePropertyName || '未設定（自動判定）'));
+  lines.push(PROP_KEYS.assigneePropertyName + ': ' + (config.assigneePropertyName || '未設定（自動判定）'));
+  lines.push(PROP_KEYS.priorityPropertyName + ': ' + (config.priorityPropertyName || '未設定（自動判定）'));
 
   var missing = missingConfigKeys_(config);
   lines.push(missing.length ? '⚠ 未設定の必須項目: ' + missing.join(', ') : '✅ 必須項目はすべて設定済み');
@@ -37,11 +39,16 @@ function showSetupStatus() {
       ? snapshot.databases.length + '件 (更新: ' + snapshot.updatedAt + ')'
       : 'なし'));
 
+  var userSnapshot = safeJsonParse_(config.notionUserCacheRaw);
+  lines.push('Notionメンバーのキャッシュ: ' + (userSnapshot && userSnapshot.users
+      ? userSnapshot.users.length + '人 (更新: ' + userSnapshot.updatedAt + ')'
+      : 'なし'));
+
   var handlers = ScriptApp.getProjectTriggers().map(function (trigger) {
     return trigger.getHandlerFunction();
   });
   lines.push('トリガー: ' + (handlers.length ? handlers.join(', ') : 'なし'));
-  if (handlers.indexOf('refreshDatabaseCache') === -1 || handlers.indexOf(QUEUE_SWEEP_HANDLER) === -1) {
+  if (handlers.indexOf('refreshCaches') === -1 || handlers.indexOf(QUEUE_SWEEP_HANDLER) === -1) {
     lines.push('⚠ installTriggers を実行してください');
   }
   console.log(lines.join('\n'));
@@ -56,10 +63,39 @@ function refreshDatabaseCache() {
   if (!result.ok) throw new Error('Notionの検索に失敗しました: ' + result.error);
   console.log(result.databases.length + '件のデータベースを取得しました。');
   result.databases.forEach(function (database) {
-    console.log('  - ' + database.title + ' (' + database.id + ') ' +
-        'タイトル列: ' + database.titleProperty +
-        (database.urlProperty ? ' / URL列: ' + database.urlProperty : ''));
+    var columns = ['タイトル列: ' + database.titleProperty];
+    if (database.urlProperty) columns.push('URL列: ' + database.urlProperty);
+    if (database.dueProperty) columns.push('期限列: ' + database.dueProperty);
+    if (database.assigneeProperty) columns.push('担当者列: ' + database.assigneeProperty);
+    if (database.priorityProperty) {
+      columns.push('優先度列: ' + database.priorityProperty.name +
+          ' [' + database.priorityProperty.options.join(', ') + ']');
+    }
+    console.log('  - ' + database.title + ' (' + database.id + ') ' + columns.join(' / '));
   });
+}
+
+/**
+ * Notionのメンバー一覧を取り直す。担当者の突き合わせに使う。
+ */
+function refreshNotionUserCache() {
+  var config = readConfig_(PropertiesService.getScriptProperties().getProperties());
+  var result = refreshNotionUsers_(config);
+  if (!result.ok) throw new Error('Notionのメンバー取得に失敗しました: ' + result.error);
+  console.log(result.users.length + '人のメンバーを取得しました（メールがある人のみ）。');
+}
+
+/**
+ * データベース一覧とメンバー一覧をまとめて取り直す。時間主導トリガーの実行対象。
+ */
+function refreshCaches() {
+  refreshDatabaseCache();
+  try {
+    refreshNotionUserCache();
+  } catch (err) {
+    // 担当者を使わない運用でも一覧更新は止めない。
+    logError_('メンバー一覧の更新に失敗', err);
+  }
 }
 
 /**
@@ -71,17 +107,17 @@ function refreshDatabaseCache() {
  * 送信直後の処理は、そのつど作られる使い捨てトリガーが行う。
  */
 function installTriggers() {
-  var managed = ['refreshDatabaseCache', QUEUE_SWEEP_HANDLER];
+  var managed = ['refreshDatabaseCache', 'refreshCaches', QUEUE_SWEEP_HANDLER];
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
     if (managed.indexOf(trigger.getHandlerFunction()) !== -1) {
       ScriptApp.deleteTrigger(trigger);
     }
   });
-  ScriptApp.newTrigger('refreshDatabaseCache').timeBased().everyHours(1).create();
+  ScriptApp.newTrigger('refreshCaches').timeBased().everyHours(1).create();
   ScriptApp.newTrigger(QUEUE_SWEEP_HANDLER).timeBased().everyMinutes(5).create();
-  console.log('トリガーを作成しました: refreshDatabaseCache (1時間ごと) / ' +
+  console.log('トリガーを作成しました: refreshCaches (1時間ごと) / ' +
       QUEUE_SWEEP_HANDLER + ' (5分ごと)');
-  refreshDatabaseCache();
+  refreshCaches();
 }
 
 /**

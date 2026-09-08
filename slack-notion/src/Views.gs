@@ -206,6 +206,104 @@ function buildRegistrationNoticeModal_() {
 }
 
 /**
+ * 作成完了の通知。あとから直せるよう「修正する」ボタンを付ける。
+ * @param {string} text 本文（mrkdwn）。
+ * @param {!Object} target {pageId, databaseId, title, dueDate}
+ * @return {!Array<!Object>}
+ */
+function buildCreatedBlocks_(text, target) {
+  return [
+    { type: 'section', text: { type: 'mrkdwn', text: text } },
+    {
+      type: 'actions',
+      block_id: 'created_task',
+      elements: [{
+        type: 'button',
+        action_id: EDIT_ACTION_ID,
+        text: { type: 'plain_text', text: '修正する', emoji: true },
+        value: JSON.stringify({
+          p: target.pageId,
+          d: target.databaseId,
+          t: truncate_(target.title || '', TITLE_MAX_LENGTH),
+          u: target.dueDate || ''
+        })
+      }]
+    }
+  ];
+}
+
+/**
+ * タスク名と期限を直すモーダル。
+ * @param {!Object} current {pageId, databaseId, title, dueDate, responseUrl}
+ * @param {boolean} hasDueProperty 追加先に日付列があるか。
+ * @return {!Object}
+ */
+function buildEditModal_(current, hasDueProperty) {
+  var blocks = [{
+    type: 'input',
+    block_id: EDIT_TITLE_BLOCK_ID,
+    label: { type: 'plain_text', text: 'タスク名', emoji: true },
+    element: {
+      type: 'plain_text_input',
+      action_id: EDIT_TITLE_ACTION_ID,
+      initial_value: truncate_(current.title || '', TITLE_MAX_LENGTH),
+      max_length: TITLE_MAX_LENGTH
+    }
+  }];
+
+  if (hasDueProperty) {
+    var datepicker = {
+      type: 'datepicker',
+      action_id: EDIT_DUE_ACTION_ID,
+      placeholder: { type: 'plain_text', text: '期限を選択', emoji: true }
+    };
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(current.dueDate || ''))) {
+      datepicker.initial_date = current.dueDate;
+    }
+    blocks.push({
+      type: 'input',
+      block_id: EDIT_DUE_BLOCK_ID,
+      optional: true,
+      label: { type: 'plain_text', text: '期限', emoji: true },
+      element: datepicker
+    });
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: '空にして保存すると期限を消せます。' }]
+    });
+  }
+
+  return {
+    type: 'modal',
+    callback_id: EDIT_MODAL_CALLBACK_ID,
+    private_metadata: JSON.stringify({
+      p: current.pageId,
+      d: current.databaseId,
+      r: current.responseUrl || ''
+    }),
+    title: { type: 'plain_text', text: 'タスクを修正', emoji: true },
+    submit: { type: 'plain_text', text: '保存', emoji: true },
+    close: { type: 'plain_text', text: 'キャンセル', emoji: true },
+    blocks: blocks
+  };
+}
+
+/**
+ * 修正モーダルの入力を読む。
+ * @param {!Object} view
+ * @return {{title: string, dueDate: string}}
+ */
+function readEditedTask_(view) {
+  var state = (view && view.state && view.state.values) || {};
+  var title = (((state[EDIT_TITLE_BLOCK_ID] || {})[EDIT_TITLE_ACTION_ID]) || {}).value || '';
+  var due = (((state[EDIT_DUE_BLOCK_ID] || {})[EDIT_DUE_ACTION_ID]) || {}).selected_date || '';
+  return {
+    title: String(title).replace(/\s+/g, ' ').trim(),
+    dueDate: String(due || '')
+  };
+}
+
+/**
  * データベースをセレクトの選択肢に変換する。
  * @param {!Object} database
  * @return {!Object}

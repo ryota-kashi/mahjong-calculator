@@ -52,20 +52,48 @@ function secureEquals_(a, b) {
 }
 
 /**
- * Slack Web API を呼ぶ。
+ * Slack Web API を JSON で呼ぶ。views.* や chat.* 向け。
  * @param {!Object} config
  * @param {string} method 例: 'views.open'
  * @param {!Object} payload
  * @return {{ok: boolean, error: string, body: !Object}}
  */
 function callSlackApi_(config, method, payload) {
-  var response = UrlFetchApp.fetch(SLACK_API_BASE + method, {
-    method: 'post',
+  return requestSlack_(config, method, {
     contentType: 'application/json; charset=utf-8',
-    headers: { Authorization: 'Bearer ' + config.slackBotToken },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+    payload: JSON.stringify(payload)
   });
+}
+
+/**
+ * Slack Web API をフォーム形式で呼ぶ。
+ * users.info や conversations.replies のような取得系は
+ * application/x-www-form-urlencoded しか受け付けないため、こちらを使う。
+ * @param {!Object} config
+ * @param {string} method 例: 'users.info'
+ * @param {!Object<string,string>} params
+ * @return {{ok: boolean, error: string, body: !Object}}
+ */
+function callSlackFormApi_(config, method, params) {
+  return requestSlack_(config, method, { payload: params });
+}
+
+/**
+ * @param {!Object} config
+ * @param {string} method
+ * @param {!Object} options UrlFetchApp に渡す追加のオプション。
+ * @return {{ok: boolean, error: string, body: !Object}}
+ */
+function requestSlack_(config, method, options) {
+  var request = {
+    method: 'post',
+    headers: { Authorization: 'Bearer ' + config.slackBotToken },
+    muteHttpExceptions: true
+  };
+  for (var key in options) {
+    if (Object.prototype.hasOwnProperty.call(options, key)) request[key] = options[key];
+  }
+  var response = UrlFetchApp.fetch(SLACK_API_BASE + method, request);
   var body = safeJsonParse_(response.getContentText()) || {};
   if (!body.ok) {
     return { ok: false, error: String(body.error || 'unknown_error'), body: body };
@@ -109,7 +137,7 @@ function lookupUserName_(config, userId) {
 
   var result;
   try {
-    result = callSlackApi_(config, 'users.info', { user: userId });
+    result = callSlackFormApi_(config, 'users.info', { user: userId });
   } catch (err) {
     return userId;
   }
@@ -123,17 +151,110 @@ function lookupUserName_(config, userId) {
 }
 
 /**
+ * ユーザーのメールアドレスを返す。Notionのメンバーと突き合わせるために使う。
+ * users:read.email スコープが要る。取れなければ空文字。
+ * @param {!Object} config
+ * @param {string} userId
+ * @return {string}
+ */
+function lookupUserEmail_(config, userId) {
+  if (!userId) return '';
+  var cacheKey = 'slack_email_' + userId;
+  var cached = readCache_(cacheKey);
+  if (cached) return cached.email || '';
+
+  var result;
+  try {
+    result = callSlackFormApi_(config, 'users.info', { user: userId });
+  } catch (err) {
+    logError_('users.info の呼び出しに失敗', err);
+    return '';
+  }
+  if (!result.ok) {
+    logError_('users.info が失敗: ' + result.error, null);
+    return '';
+  }
+  var email = String((((result.body.user || {}).profile) || {}).email || '').toLowerCase();
+  writeCache_(cacheKey, { email: email }, USER_CACHE_TTL_SECONDS);
+  return email;
+}
+
+/** スレッドから読み込むメッセージ数の上限。 */
+var THREAD_MESSAGE_LIMIT = 50;
+
+/** スレッド全体の文字数の上限。 */
+var THREAD_TRANSCRIPT_MAX_LENGTH = 12000;
+
+/**
+ * スレッドの投稿をまとめて取得する。
+ * botがチャンネルに参加していない場合などは取得できないので null を返し、
+ * 呼び出し側は元の1件だけで処理を続ける。
+ * @param {!Object} config
+ * @param {string} channelId
+ * @param {string} threadTs
+ * @return {?Array<!Object>}
+ */
+function fetchThreadMessages_(config, channelId, threadTs) {
+  if (!channelId || !threadTs) return null;
+  var result;
+  try {
+    result = callSlackFormApi_(config, 'conversations.replies', {
+      channel: channelId,
+      ts: threadTs,
+      limit: THREAD_MESSAGE_LIMIT
+    });
+  } catch (err) {
+    logError_('conversations.replies の呼び出しに失敗', err);
+    return null;
+  }
+  if (!result.ok) {
+    logError_('スレッドを取得できませんでした: ' + result.error +
+        '（botがチャンネルに参加しているか、履歴スコープがあるか確認してください）', null);
+    return null;
+  }
+  var messages = result.body.messages || [];
+  return messages.length ? messages : null;
+}
+
+/**
+ * スレッドの投稿を「名前: 本文」の形に並べる。
+ * @param {!Object} config
+ * @param {!Array<!Object>} messages
+ * @return {{transcript: string, raw: string, count: number}}
+ */
+function buildThreadTranscript_(config, messages) {
+  var lines = [];
+  var raw = [];
+  for (var i = 0; i < messages.length; i++) {
+    var message = messages[i] || {};
+    var body = String(message.text || '').trim();
+    if (!body) continue;
+    var name = message.username || lookupUserName_(config, String(message.user || '')) || '不明';
+    lines.push(name + ': ' + slackTextToPlain_(body));
+    raw.push(body);
+  }
+  return {
+    transcript: truncate_(lines.join('\n\n'), THREAD_TRANSCRIPT_MAX_LENGTH),
+    raw: raw.join('\n'),
+    count: lines.length
+  };
+}
+
+/**
  * response_url に本人だけに見えるメッセージを返す。
  * @param {string} responseUrl
- * @param {string} text
+ * @param {string} text 通知やフォールバックに使う素のテキスト。
+ * @param {Array<!Object>=} blocks ボタンなどを付けたい場合のBlock Kit。
  */
-function postToResponseUrl_(responseUrl, text) {
+function postToResponseUrl_(responseUrl, text, blocks) {
   if (!responseUrl) return;
+  var message = { response_type: 'ephemeral', replace_original: false, text: text };
+  if (blocks && blocks.length) message.blocks = blocks;
   try {
     UrlFetchApp.fetch(responseUrl, {
       method: 'post',
       contentType: 'application/json; charset=utf-8',
-      payload: JSON.stringify({ response_type: 'ephemeral', replace_original: false, text: text }),
+      payload: JSON.stringify(message),
       muteHttpExceptions: true
     });
   } catch (err) {
