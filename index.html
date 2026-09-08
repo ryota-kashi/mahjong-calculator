@@ -9,7 +9,7 @@
     <style>
       /* ==========================================================
          「卓と牌」— 麻雀の実物から取った配色
-           地   : 牌の象牙をやや青灰に寄せた紙色
+           地   : 牌の象牙。白いが完全な純白ではない紙色
            墨   : 文字
            フェルト: 雀卓の深緑。選択状態と罫にだけ使う
            朱   : 中の赤。満貫以上の判にだけ使う
@@ -17,19 +17,19 @@
       :root {
         color-scheme: light;
 
-        --ground: #eceeea;
-        --sheet: #ffffff;
-        --raise: #f2f4f0;
+        --ground: #eeefe9;
+        --sheet: #fdfcf9;
+        --raise: #f3f3ec;
         --ink: #21261f;
         --ink-2: #59614f;
-        --rule: #cbd2c5;
+        --rule: #c3ccbd;
         --rule-strong: #a9b3a2;
+        --table: #21432f;
         --felt: #2e5d45;
         --on-felt: #f4f7f2;
         --ink-3: #8a9384;
         --felt-ink: #2e5d45;
         --vermilion: #a83a25;
-        --vermilion-bg: #f6e7e2;
         --warn-bg: #f3eddc;
         --warn-fg: #6b5a21;
         --warn-rule: #cfc193;
@@ -98,8 +98,17 @@
       }
 
       @media (min-width: 520px) {
-        body { padding: 32px 16px 48px; }
-        .container { min-height: 0; border: 1px solid var(--rule); }
+        /* 広い画面では、卓の上に伝票が一枚置かれている見え方にする */
+        body {
+          padding: 36px 16px 56px;
+          background:
+            repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0 2px, transparent 2px 7px),
+            var(--table);
+        }
+        .container {
+          min-height: 0;
+          box-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 10px 30px rgba(12, 26, 18, 0.28);
+        }
       }
 
       .header-row {
@@ -107,17 +116,22 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding: 14px 18px 12px;
-        border-bottom: 2px solid var(--felt);
+        padding: 15px 18px;
+        background:
+          repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 7px),
+          var(--felt);
+        color: var(--on-felt);
       }
+      .header-row + #app { border-top: 1px solid var(--rule); }
 
       .masthead { display: flex; align-items: center; gap: 9px; }
       .masthead h1 {
         margin: 0;
         font-family: var(--mincho);
-        font-size: 1.2rem;
+        font-size: 1.24rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.1em;
+        text-indent: 0.1em;
       }
       .tile-mark { display: block; flex: none; }
 
@@ -135,6 +149,11 @@
         transition: border-color 0.12s, color 0.12s;
       }
       .icon-btn:hover { border-color: var(--rule-strong); color: var(--ink); }
+      .header-row .icon-btn { border-color: rgba(244, 247, 242, 0.4); color: var(--on-felt); }
+      .header-row .icon-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: var(--on-felt);
+      }
       .icon-btn.small { width: 40px; height: 40px; }
 
       /* ---------- 条件の行組み ---------- */
@@ -181,7 +200,12 @@
         transition: background 0.12s, color 0.12s;
       }
       .toggle-btn:last-child { border-right: 0; }
-      .toggle-btn.active { background: var(--felt); color: var(--on-felt); font-weight: 500; }
+      .toggle-btn.active {
+        background: var(--felt);
+        color: var(--on-felt);
+        font-weight: 700;
+        box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+      }
       .toggle-btn:disabled {
         background: repeating-linear-gradient(-45deg,
           transparent 0 5px, var(--rule) 5px 6px);
@@ -224,8 +248,9 @@
       }
       .helper-btn:hover { background: var(--raise); }
       .helper-btn:disabled {
+        background: repeating-linear-gradient(-45deg,
+          transparent 0 5px, var(--rule) 5px 6px);
         color: var(--ink-2);
-        border-style: dashed;
         cursor: not-allowed;
       }
 
@@ -257,17 +282,33 @@
 
       /* ---------- 答え。ページで唯一持ち上げる場所 ---------- */
       .result-area {
-        margin: 14px 0 0;
+        position: relative;
+        margin: 18px 0 0;
         padding: 20px 16px 18px;
         background: var(--raise);
         border-top: 2px solid var(--felt);
-        border-radius: 0 0 var(--r) var(--r);
+        border-bottom: 1px solid var(--rule-strong);
+        box-shadow: inset 0 2px 5px rgba(33, 38, 31, 0.06);
         text-align: center;
       }
+      /* 伝票の隅の見当（トンボ）。紙であることの合図 */
+      .result-area::before,
+      .result-area::after {
+        content: "";
+        position: absolute;
+        top: 8px;
+        width: 9px; height: 9px;
+        border-top: 1px solid var(--rule-strong);
+      }
+      .result-area::before { left: 8px; border-left: 1px solid var(--rule-strong); }
+      .result-area::after { right: 8px; border-right: 1px solid var(--rule-strong); }
+
       .result-label {
+        font-family: var(--mincho);
         font-size: var(--fs-xs);
         color: var(--ink-2);
-        letter-spacing: 0.06em;
+        letter-spacing: 0.34em;
+        text-indent: 0.34em;
       }
       .result-score {
         font-family: var(--mincho);
@@ -278,21 +319,22 @@
         font-variant-numeric: tabular-nums;
         margin-top: 2px;
       }
-      .score-unit { font-size: 1.2rem; font-weight: 600; margin-left: 2px; }
+      .score-unit { font-size: 1.15rem; font-weight: 600; margin-left: 0.14em; }
       .score-rank {
         display: block;
         width: fit-content;
         margin: 10px auto 0;
-        padding: 2px 12px;
-        background: var(--vermilion-bg);
-        border: 1px solid var(--vermilion);
-        border-radius: 2px;
-        color: var(--vermilion);
-        font-family: var(--gothic);
+        padding: 7px 5px;
+        background: var(--vermilion);
+        color: #fdf6f2;
+        font-family: var(--mincho);
         font-size: var(--fs-sm);
         font-weight: 700;
-        letter-spacing: 0.08em;
-        line-height: 1.7;
+        line-height: 1.25;
+        letter-spacing: 0.12em;
+        writing-mode: vertical-rl;
+        border-radius: 2px;
+        transform: rotate(-3deg);
       }
       .score-placeholder {
         font-family: var(--gothic);
@@ -303,17 +345,21 @@
       .result-detail { margin-top: 10px; font-size: var(--fs-md); }
       .result-line { font-size: var(--fs-sm); color: var(--ink-2); }
       .tsumo-breakdown {
-        max-width: 210px;
-        margin: 0 auto;
-        border-top: 1px solid var(--rule);
-        padding-top: 8px;
+        max-width: 224px;
+        margin: 12px auto 0;
+        border: 1px solid var(--rule);
+        background: var(--sheet);
       }
       .tsumo-row {
         display: flex; justify-content: space-between;
+        gap: 10px;
+        padding: 5px 11px;
+        border-top: 1px solid var(--rule);
         font-variant-numeric: tabular-nums;
       }
+      .tsumo-row:first-child { border-top: 0; }
       .tsumo-who { color: var(--ink-2); font-size: var(--fs-sm); }
-      .tsumo-amt { font-weight: 500; }
+      .tsumo-amt { font-weight: 700; }
 
       /* ---------- 注意書き ---------- */
       .hint, .fu-warn {
@@ -379,16 +425,23 @@
         z-index: 1;
         display: flex; align-items: center; justify-content: space-between;
         gap: 10px;
-        padding: 13px 18px;
-        background: var(--sheet);
-        border-bottom: 2px solid var(--felt);
+        padding: 14px 18px;
+        background:
+          repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 7px),
+          var(--felt);
+        color: var(--on-felt);
       }
       .modal-header h2 {
         margin: 0;
         font-family: var(--mincho);
         font-size: var(--fs-lg);
         font-weight: 700;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.08em;
+      }
+      .modal-header .icon-btn { border-color: rgba(244, 247, 242, 0.4); color: var(--on-felt); }
+      .modal-header .icon-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: var(--on-felt);
       }
       .modal-header-actions { display: flex; gap: 4px; }
 
@@ -412,12 +465,13 @@
       .fu-state-bar span:last-child { color: var(--ink); }
 
       .fu-section-title {
-        margin: 18px 0 8px;
-        font-family: var(--mincho);
-        font-size: var(--fs-sm);
+        margin: 20px 0 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid var(--rule-strong);
+        font-size: var(--fs-md);
         font-weight: 700;
         color: var(--ink);
-        letter-spacing: 0.06em;
+        letter-spacing: 0.04em;
       }
       .fu-section-title:first-of-type { margin-top: 0; }
 
@@ -436,6 +490,7 @@
         cursor: pointer;
         transition: background 0.12s, color 0.12s;
       }
+      .fu-btn { word-break: keep-all; overflow-wrap: anywhere; }
       .fu-btn small { display: block; font-size: var(--fs-xs); color: var(--ink-2); }
       .fu-btn.active { background: var(--felt); border-color: var(--felt); color: var(--on-felt); font-weight: 500; }
       .fu-btn.active small { color: var(--on-felt); opacity: 0.85; }
@@ -503,15 +558,23 @@
         font-variant-numeric: tabular-nums;
         line-height: 1.15;
       }
-      .mentsu-count small { display: block; font-size: 0.625rem; font-weight: 400; color: var(--ink-2); }
+      .mentsu-count small { display: block; font-size: 0.6875rem; font-weight: 400; color: var(--ink-2); }
       .mentsu-count.on { background: var(--raise); color: var(--felt-ink); font-weight: 700; }
 
       /* ---------- 役のチップ ---------- */
-      .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+      /* 役は格子に載せる。行ごとの右端が揃い、刷り物らしくなる */
+      .chips {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(102px, 1fr));
+        gap: 6px;
+      }
+      /* 役満は名前が長いので列を広く取る */
+      .chips.wide { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }
       .chip {
-        min-height: 40px;
-        display: inline-flex; align-items: baseline; gap: 5px;
-        padding: 8px 11px;
+        justify-content: center;
+        min-height: 42px;
+        display: inline-flex; align-items: baseline; gap: 4px;
+        padding: 8px 6px;
         background: var(--sheet);
         border: 1px solid var(--rule-strong);
         border-radius: var(--r);
@@ -591,9 +654,9 @@
         cursor: pointer;
       }
       .primary:disabled {
-        background: transparent;
+        background: repeating-linear-gradient(-45deg,
+          transparent 0 5px, var(--rule) 5px 6px);
         border-color: var(--rule-strong);
-        border-style: dashed;
         color: var(--ink-2);
         cursor: not-allowed;
       }
@@ -664,8 +727,8 @@
       <div class="header-row">
         <div class="masthead">
           <svg class="tile-mark" width="17" height="23" viewBox="0 0 17 23" aria-hidden="true">
-            <rect x="0.8" y="0.8" width="15.4" height="21.4" rx="2.4" fill="none" stroke="var(--felt)" stroke-width="1.6"/>
-            <rect x="5" y="6.5" width="7" height="10" rx="1" fill="var(--vermilion)"/>
+            <rect x="0.8" y="0.8" width="15.4" height="21.4" rx="2.4" fill="var(--on-felt)" stroke="none"/>
+            <rect x="4.6" y="6" width="7.8" height="11" rx="1" fill="var(--vermilion)"/>
           </svg>
           <h1>麻雀点数計算機</h1>
         </div>
@@ -731,7 +794,7 @@
         </div>
 
         <div class="result-area" id="result-area" role="status" aria-live="polite" aria-atomic="true">
-            <div class="result-label">点数</div>
+            <div class="result-label">和了点</div>
             <div class="result-score" id="score-display"></div>
             <div class="result-detail" id="score-detail"></div>
         </div>
@@ -767,7 +830,7 @@
                 <h3 class="fu-section-title">待ち</h3>
                 <div class="fu-btn-grid" id="wait-grid"></div>
 
-                <h3 class="fu-section-title">雀頭 (アタマ)</h3>
+                <h3 class="fu-section-title">雀頭（アタマ）</h3>
                 <div class="fu-btn-grid" id="head-grid"></div>
 
                 <h3 class="fu-section-title">面子（刻子・槓子）</h3>
@@ -814,7 +877,7 @@
                 <div id="han-counters"></div>
 
                 <h3 class="fu-section-title">役満</h3>
-                <div class="chips" id="yaku-man"></div>
+                <div class="chips wide" id="yaku-man"></div>
             </div>
 
             <div class="modal-footer">
@@ -886,8 +949,8 @@
 
       const HAN_OPTIONS = [
           { v: 1, l: '1翻' }, { v: 2, l: '2翻' }, { v: 3, l: '3翻' }, { v: 4, l: '4翻' },
-          { v: 5, l: '5翻 (満貫)' }, { v: 6, l: '6-7翻 (跳満)' }, { v: 8, l: '8-10翻 (倍満)' },
-          { v: 11, l: '11-12翻 (三倍満)' }, { v: 13, l: '13翻+ (役満)' },
+          { v: 5, l: '5翻（満貫）' }, { v: 6, l: '6〜7翻（跳満）' }, { v: 8, l: '8〜10翻（倍満）' },
+          { v: 11, l: '11〜12翻（三倍満）' }, { v: 13, l: '13翻以上（役満）' },
           { v: 26, l: 'ダブル役満' }, { v: 39, l: 'トリプル役満' },
           { v: 52, l: '四倍役満' }, { v: 65, l: '五倍役満' }, { v: 78, l: '六倍役満' }
       ];
@@ -916,14 +979,14 @@
       const OPEN_KAN_KEYS = ['kan-mo', 'kan-yo'];
 
       const WAITS = [
-          { id: 'ryanmen', n: '両面', sub: 'リャンメン', fu: 0 },
+          { id: 'ryanmen', n: '両面', sub: '', fu: 0 },
           { id: 'shanpon', n: 'シャボ', sub: '双ポン', fu: 0 },
-          { id: 'other', n: 'カンチャン<br>ペンチャン・単騎', sub: '', fu: 2 }
+          { id: 'other', n: 'カンチャン<br>ペンチャン<br>単騎', sub: '', fu: 2 }
       ];
 
       const HEADS = [
           { v: 0, n: '数牌・客風', sub: '符なし' },
-          { v: 2, n: '役牌', sub: '三元/自風/場風' },
+          { v: 2, n: '役牌', sub: '三元・自風・場風' },
           { v: 4, n: '連風牌', sub: 'ダブ東など' }
       ];
 
@@ -1149,7 +1212,8 @@
           else if (!state.isTsumo && fu < 30) { fu = 30; note = '20符ロンは無いため最低30符'; }
 
           if (fu > 110) { fu = 110; note = '上限の110符に丸めました（入力ミスの可能性があります）'; }
-          return { fu: fu, breakdown: parts.join(' + ') + ` = ${total}`, note: note };
+          const rounded = fu !== total && !note ? `${total} → 切り上げて ${fu}符` : `${total}`;
+          return { fu: fu, breakdown: parts.join(' + ') + ` = ${rounded}`, note: note };
       }
 
       // ===================== 翻数計算 =====================
@@ -1371,7 +1435,7 @@
                   ? `<div class="tsumo-breakdown"><div class="tsumo-row"><span class="tsumo-who">子 ×3</span><span class="tsumo-amt">${p.fromChild.toLocaleString()}点オール</span></div></div>`
                   : `<div class="tsumo-breakdown"><div class="tsumo-row"><span class="tsumo-who">子 ×2</span><span class="tsumo-amt">${p.fromChild.toLocaleString()}点</span></div><div class="tsumo-row"><span class="tsumo-who">親</span><span class="tsumo-amt">${p.fromDealer.toLocaleString()}点</span></div></div>`;
           } else {
-              detail = '<div class="result-line">ロン</div>';
+              detail = `<div class="tsumo-breakdown"><div class="tsumo-row"><span class="tsumo-who">放銃者</span><span class="tsumo-amt">${p.total.toLocaleString()}点</span></div></div>`;
           }
           if (state.honba > 0) {
               detail += `<div class="result-line">${state.honba}本場 +${(state.honba * 300).toLocaleString()}点 を含む</div>`;
@@ -1446,10 +1510,13 @@
       }
 
       // ---- 翻数アシスト ----
-      function chipHTML(handler, name, han, active, disabled) {
+      // note には翻数（数値）か、任意の添え字（文字列）を渡す
+      function chipHTML(handler, name, note, active, disabled) {
+          const suffix = note === null ? ''
+              : `<span class="chip-han">${typeof note === 'number' ? note + '翻' : note}</span>`;
           return `<button type="button" class="chip${active ? ' active' : ''}" onclick="${handler}"` +
               `${disabled ? ' disabled' : ''} aria-pressed="${active ? 'true' : 'false'}">${name}` +
-              (han !== null ? `<span class="chip-han">${han}翻</span>` : '') + '</button>';
+              suffix + '</button>';
       }
 
       function renderHanModal() {
@@ -1458,15 +1525,18 @@
           YAKU.forEach((y) => {
               const avail = yakuAvailable(y);
               const bucket = y.h >= 3 ? 3 : y.h;
+              const han = avail ? yakuHanOf(y) : y.h;
+              // 見出しと同じ翻数なら、チップ側には出さない（3翻以上の節は値がばらつくので出す）
+              const showHan = bucket === 3 || han !== bucket;
               buckets[bucket].push(chipHTML(`toggleYaku('${y.id}')`, y.n,
-                  avail ? yakuHanOf(y) : y.h, !!hanState.yaku[y.id], !avail || r.yakuman));
+                  showHan ? han : null, !!hanState.yaku[y.id], !avail || r.yakuman));
           });
           $('yaku-1').innerHTML = buckets[1].join('');
           $('yaku-2').innerHTML = buckets[2].join('');
           $('yaku-3').innerHTML = buckets[3].join('');
 
           $('yaku-man').innerHTML = YAKUMAN.map((y) => chipHTML(
-              `toggleYakuman('${y.id}')`, y.n + (y.dbl ? '（W）' : ''), null,
+              `toggleYakuman('${y.id}')`, y.n, y.dbl ? '二倍' : null,
               !!hanState.yakuman[y.id], !yakuAvailable(y)
           )).join('');
 
@@ -1539,7 +1609,7 @@
               `${tableCellText(han, fu)}</button></td>`;
 
           let html = '<caption class="sr-only">翻数と符ごとの点数一覧</caption>' +
-              '<thead><tr><th scope="col" class="corner">符 \\ 翻</th>' +
+              '<thead><tr><th scope="col" class="corner">符＼翻</th>' +
               hans.map((h) => `<th scope="col">${h}翻</th>`).join('') + '</tr></thead><tbody>';
 
           FU_OPTIONS.forEach((fu) => {
@@ -1762,7 +1832,7 @@
           $('han-select').innerHTML = HAN_OPTIONS
               .map((o) => `<option value="${o.v}">${o.l}</option>`).join('');
           $('fu-select').innerHTML = FU_OPTIONS.map((f) => {
-              const extra = f === 20 ? ' (平和ツモ)' : f === 25 ? ' (七対子)' : '';
+              const extra = f === 20 ? '（平和ツモ）' : f === 25 ? '（七対子）' : '';
               return `<option value="${f}">${f}符${extra}</option>`;
           }).join('');
           commit();
