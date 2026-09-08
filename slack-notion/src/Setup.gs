@@ -18,10 +18,16 @@ function showSetupStatus() {
   ].forEach(function (key) {
     lines.push(key + ': ' + (props[key] ? '設定済み (' + String(props[key]).length + '文字)' : '未設定'));
   });
+  lines.push(PROP_KEYS.geminiApiKey + ': ' +
+      (props[PROP_KEYS.geminiApiKey] ? '設定済み（AIでタスク名と期限を抽出します）' : '未設定（本文の1行目をタスク名にします）'));
+  lines.push(PROP_KEYS.geminiModel + ': ' + config.geminiModel);
+  lines.push(PROP_KEYS.geminiThinkingBudget + ': ' +
+      (config.geminiThinkingBudget < 0 ? '送らない（モデルの既定）' : config.geminiThinkingBudget));
   lines.push(PROP_KEYS.notionVersion + ': ' + config.notionVersion);
   lines.push(PROP_KEYS.databaseAllowlist + ': ' +
       (config.databaseAllowlist.length ? config.databaseAllowlist.length + '件' : '未設定（全件）'));
   lines.push(PROP_KEYS.urlPropertyName + ': ' + (config.urlPropertyName || '未設定（自動判定）'));
+  lines.push(PROP_KEYS.duePropertyName + ': ' + (config.duePropertyName || '未設定（自動判定）'));
 
   var missing = missingConfigKeys_(config);
   lines.push(missing.length ? '⚠ 未設定の必須項目: ' + missing.join(', ') : '✅ 必須項目はすべて設定済み');
@@ -30,6 +36,14 @@ function showSetupStatus() {
   lines.push('データベースのキャッシュ: ' + (snapshot && snapshot.databases
       ? snapshot.databases.length + '件 (更新: ' + snapshot.updatedAt + ')'
       : 'なし'));
+
+  var handlers = ScriptApp.getProjectTriggers().map(function (trigger) {
+    return trigger.getHandlerFunction();
+  });
+  lines.push('トリガー: ' + (handlers.length ? handlers.join(', ') : 'なし'));
+  if (handlers.indexOf('refreshDatabaseCache') === -1 || handlers.indexOf(QUEUE_SWEEP_HANDLER) === -1) {
+    lines.push('⚠ installTriggers を実行してください');
+  }
   console.log(lines.join('\n'));
 }
 
@@ -49,18 +63,47 @@ function refreshDatabaseCache() {
 }
 
 /**
- * 1時間ごとにデータベース一覧を取り直すトリガーを作る。
- * モーダルを開くときにNotionを呼ばずに済ませるための仕込み。
+ * 必要なトリガーをまとめて作る。初回セットアップで1回実行する。
+ *
+ * - refreshDatabaseCache: 1時間ごと。データベース一覧を取り直す
+ * - sweepQueuedTasks: 5分ごと。取りこぼしたジョブを拾う保険
+ *
+ * 送信直後の処理は、そのつど作られる使い捨てトリガーが行う。
  */
-function installDatabaseRefreshTrigger() {
+function installTriggers() {
+  var managed = ['refreshDatabaseCache', QUEUE_SWEEP_HANDLER];
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
-    if (trigger.getHandlerFunction() === 'refreshDatabaseCache') {
+    if (managed.indexOf(trigger.getHandlerFunction()) !== -1) {
       ScriptApp.deleteTrigger(trigger);
     }
   });
   ScriptApp.newTrigger('refreshDatabaseCache').timeBased().everyHours(1).create();
-  console.log('トリガーを作成しました: refreshDatabaseCache (1時間ごと)');
+  ScriptApp.newTrigger(QUEUE_SWEEP_HANDLER).timeBased().everyMinutes(5).create();
+  console.log('トリガーを作成しました: refreshDatabaseCache (1時間ごと) / ' +
+      QUEUE_SWEEP_HANDLER + ' (5分ごと)');
   refreshDatabaseCache();
+}
+
+/**
+ * 未処理のジョブを確認する。動かないときの切り分け用。
+ */
+function showQueue() {
+  var all = PropertiesService.getScriptProperties().getProperties();
+  var jobs = [];
+  for (var key in all) {
+    if (!Object.prototype.hasOwnProperty.call(all, key)) continue;
+    if (key.indexOf(JOB_PROPERTY_PREFIX) !== 0) continue;
+    jobs.push(safeJsonParse_(all[key]) || {});
+  }
+  if (!jobs.length) {
+    console.log('未処理のジョブはありません。');
+    return;
+  }
+  console.log(jobs.length + '件が未処理です。');
+  jobs.forEach(function (job) {
+    console.log('  - ' + (job.t || '(名前なし)') + ' / 依頼者: ' + (job.uid || '不明') +
+        ' / 受付: ' + (job.q ? new Date(job.q).toISOString() : '不明'));
+  });
 }
 
 /**

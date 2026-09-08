@@ -11,8 +11,21 @@ var PROP_KEYS = {
   notionVersion: 'NOTION_VERSION',
   databaseAllowlist: 'NOTION_DATABASE_ALLOWLIST',
   urlPropertyName: 'NOTION_URL_PROPERTY',
+  duePropertyName: 'NOTION_DUE_PROPERTY',
+  geminiApiKey: 'GEMINI_API_KEY',
+  geminiModel: 'GEMINI_MODEL',
+  geminiThinkingBudget: 'GEMINI_THINKING_BUDGET',
   databaseCache: 'DATABASE_CACHE'
 };
+
+/** タスク名と期限の抽出に使うモデル。プロパティで上書きできる。 */
+var DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
+/**
+ * 思考トークンの上限。抽出だけなので既定では思考させない（そのぶん速い）。
+ * -1 を設定すると thinkingConfig 自体を送らない（モデルの既定に任せる）。
+ */
+var DEFAULT_THINKING_BUDGET = 0;
 
 /** Notion API のバージョン。プロパティで上書きできる。 */
 var DEFAULT_NOTION_VERSION = '2022-06-28';
@@ -73,6 +86,10 @@ function readConfig_(props) {
     notionVersion: String(props[PROP_KEYS.notionVersion] || '').trim() || DEFAULT_NOTION_VERSION,
     databaseAllowlist: allowlist,
     urlPropertyName: String(props[PROP_KEYS.urlPropertyName] || '').trim(),
+    duePropertyName: String(props[PROP_KEYS.duePropertyName] || '').trim(),
+    geminiApiKey: String(props[PROP_KEYS.geminiApiKey] || '').trim(),
+    geminiModel: String(props[PROP_KEYS.geminiModel] || '').trim() || DEFAULT_GEMINI_MODEL,
+    geminiThinkingBudget: readThinkingBudget_(props[PROP_KEYS.geminiThinkingBudget]),
     databaseCacheRaw: props[PROP_KEYS.databaseCache] || '',
     // 利用者ごとの登録内容を引くために、読み込んだプロパティをそのまま持っておく。
     // doPost で1回だけ読むので、ここから引く限り追加の呼び出しは発生しない。
@@ -91,6 +108,17 @@ function missingConfigKeys_(config) {
   if (!config.slackVerificationToken) missing.push(PROP_KEYS.slackVerificationToken);
   if (!config.notionToken) missing.push(PROP_KEYS.notionToken);
   return missing;
+}
+
+/**
+ * @param {?string} value スクリプトプロパティの値。
+ * @return {number} 思考トークンの上限。負値なら送らない。
+ */
+function readThinkingBudget_(value) {
+  var text = String(value == null ? '' : value).trim();
+  if (!text) return DEFAULT_THINKING_BUDGET;
+  var budget = parseInt(text, 10);
+  return isNaN(budget) ? DEFAULT_THINKING_BUDGET : budget;
 }
 
 /**

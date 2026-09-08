@@ -59,7 +59,7 @@ function searchNotionDatabases_(config) {
 
     var results = result.body.results || [];
     for (var i = 0; i < results.length; i++) {
-      var summary = summarizeDatabase_(results[i], config.urlPropertyName);
+      var summary = summarizeDatabase_(results[i], config);
       if (summary) databases.push(summary);
     }
     if (!result.body.has_more) break;
@@ -69,38 +69,59 @@ function searchNotionDatabases_(config) {
   return { ok: true, error: '', databases: databases };
 }
 
+/** 期限とみなしてよい列名。「期限」寄りの名前を優先する。 */
+var DUE_PROPERTY_STRONG = /期限|締切|締め切り|deadline|due/i;
+var DUE_PROPERTY_WEAK = /^date$|日付|実施日|予定日/i;
+
+/** Slackリンクを入れてよい列名。 */
+var URL_PROPERTY_PATTERN = /slack|link|url|リンク/i;
+
 /**
  * 検索結果のデータベースから、モーダルとページ作成に必要な情報だけ抜き出す。
  * @param {!Object} database Notionのdatabaseオブジェクト。
- * @param {string} preferredUrlProperty NOTION_URL_PROPERTY の設定値。
+ * @param {!Object} options {urlPropertyName, duePropertyName} を持つ設定。
  * @return {?Object} 使えないデータベースなら null。
  */
-function summarizeDatabase_(database, preferredUrlProperty) {
+function summarizeDatabase_(database, options) {
   if (!database || database.object !== 'database') return null;
   if (database.archived || database.in_trash) return null;
 
+  var preferredUrl = (options || {}).urlPropertyName || '';
+  var preferredDue = (options || {}).duePropertyName || '';
   var properties = database.properties || {};
   var titleProperty = '';
   var urlProperty = '';
-  var fallbackUrlProperty = '';
+  var dueProperty = '';
+  var guessedUrl = '';
+  var strongDue = '';
+  var weakDue = '';
 
   for (var name in properties) {
     if (!Object.prototype.hasOwnProperty.call(properties, name)) continue;
     var type = (properties[name] || {}).type;
     if (type === 'title' && !titleProperty) titleProperty = name;
     if (type === 'url') {
-      if (preferredUrlProperty && name === preferredUrlProperty) urlProperty = name;
-      if (!fallbackUrlProperty && /slack|link|url|リンク/i.test(name)) fallbackUrlProperty = name;
+      if (preferredUrl && name === preferredUrl) urlProperty = name;
+      if (!guessedUrl && URL_PROPERTY_PATTERN.test(name)) guessedUrl = name;
+    }
+    if (type === 'date') {
+      if (preferredDue && name === preferredDue) dueProperty = name;
+      if (!strongDue && DUE_PROPERTY_STRONG.test(name)) strongDue = name;
+      if (!weakDue && DUE_PROPERTY_WEAK.test(name)) weakDue = name;
     }
   }
   if (!titleProperty) return null;
-  if (!urlProperty && !preferredUrlProperty) urlProperty = fallbackUrlProperty;
+
+  // 列名を明示している場合は、その列が無ければ何も書かない（勝手に別の列を埋めない）。
+  if (!urlProperty && !preferredUrl) urlProperty = guessedUrl;
+  if (!dueProperty && !preferredDue) dueProperty = strongDue || weakDue;
 
   return {
     id: database.id,
     title: plainTextOf_(database.title) || '(無題のデータベース)',
     titleProperty: titleProperty,
     urlProperty: urlProperty,
+    dueProperty: dueProperty,
     url: database.url || ''
   };
 }
@@ -131,6 +152,9 @@ function buildNotionPagePayload_(database, task) {
   if (database.urlProperty && task.permalink) {
     properties[database.urlProperty] = { url: task.permalink };
   }
+  if (database.dueProperty && task.dueDate) {
+    properties[database.dueProperty] = { date: { start: task.dueDate } };
+  }
   return {
     parent: { database_id: database.id },
     properties: properties,
@@ -147,6 +171,7 @@ function buildNotionPagePayload_(database, task) {
 function buildNotionBlocks_(task) {
   var blocks = [];
   var meta = [];
+  if (task.dueDate) meta.push('期限: ' + task.dueDate);
   if (task.authorName) meta.push('投稿者: ' + task.authorName);
   if (task.channelName) meta.push('チャンネル: #' + task.channelName);
   if (task.postedAt) meta.push('投稿日時: ' + task.postedAt);

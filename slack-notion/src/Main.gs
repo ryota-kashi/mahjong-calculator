@@ -269,30 +269,32 @@ function handleTaskSubmission_(config, payload) {
         '選択したデータベースが見つかりません。⚡ メニューの「Notion DBの設定」から登録し直してください。'));
   }
 
+  // AIの解析とNotionへの書き込みは3秒に収まらないので、ここでは預けるだけにする。
   var metadata = safeJsonParse_(view.private_metadata) || {};
-  var cached = readCache_(String(metadata.k || '')) || {};
-  var task = {
-    title: String(metadata.t || 'Slackメッセージ'),
-    text: String(cached.text || ''),
-    permalink: String(metadata.u || ''),
-    channelName: String(metadata.c || ''),
-    authorName: String(metadata.n || '') || lookupUserName_(config, String(metadata.a || '')),
-    postedAt: String(metadata.d || '')
+  var job = {
+    uid: userId_(payload),
+    db: database.id,
+    k: String(metadata.k || ''),
+    t: String(metadata.t || 'Slackメッセージ'),
+    th: truncate_(String((readCache_(String(metadata.k || '')) || {}).text || ''), 1000),
+    u: String(metadata.u || ''),
+    c: String(metadata.c || ''),
+    a: String(metadata.a || ''),
+    n: String(metadata.n || ''),
+    d: String(metadata.d || ''),
+    r: String(metadata.r || '')
   };
 
-  var result;
   try {
-    result = createNotionTask_(config, database, task);
+    enqueueJob_(job);
   } catch (err) {
-    logError_('Notionへの追加で例外', err);
+    logError_('ジョブの保存に失敗', err);
     return jsonResponse_(buildValidationError_(
-        'Notionへの追加に失敗しました。時間をおいてもう一度お試しください。'));
+        '受け付けに失敗しました。時間をおいてもう一度お試しください。'));
   }
-  if (!result.ok) {
-    return jsonResponse_(buildValidationError_('Notionへの追加に失敗しました: ' + result.error));
-  }
+  scheduleQueueRun_();
 
-  postToResponseUrl_(String(metadata.r || ''), buildSuccessMessage_(database, task, result.url));
+  postToResponseUrl_(job.r, '⏳ *' + database.title + '* に追加しています…');
   return textResponse_('');
 }
 
@@ -305,6 +307,7 @@ function handleTaskSubmission_(config, payload) {
  */
 function buildSuccessMessage_(database, task, pageUrl) {
   var text = '✅ *' + database.title + '* に「' + task.title + '」を追加しました。';
+  if (task.dueDate) text += '（期限: ' + task.dueDate + '）';
   if (pageUrl) text += ' <' + pageUrl + '|Notionで開く>';
   return text;
 }
