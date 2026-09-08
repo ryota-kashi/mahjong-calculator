@@ -17,82 +17,110 @@
       })();
     </script>
     <style>
-      /* ---------- トークン ----------
-         白×深緑ミニマル。文字色はすべて WCAG AA (4.5:1) 以上を確保する。
-         --green   : 面・ボーダー用の緑
-         --green-text: 文字用の緑（背景が明るい面のときに使う） */
+      /* ==========================================================
+         「卓と牌」— 麻雀の実物から取った配色
+           地   : 牌の象牙をやや青灰に寄せた紙色
+           墨   : 文字
+           フェルト: 雀卓の深緑。選択状態と罫にだけ使う
+           朱   : 中の赤。満貫以上の判にだけ使う
+         ========================================================== */
       :root {
-        --bg: #f5f2eb;
-        --bg-card: #ffffff;
-        --green: #3a7a50;
-        --green-text: #2f6642;
-        --green-light: #ede8de;
-        --green-tint: rgba(58, 122, 80, 0.10);
-        --border: #d8d4cc;
-        --text-main: #1a1a1a;
-        --text-sub: #6b675f;
-        --text-on-green: #ffffff;
-        --text-on-green-sub: rgba(255, 255, 255, 0.93);
-        --warn-bg: #fdf6e3;
-        --warn-fg: #7a5510;
-        --warn-bd: #d9c184;
-        --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b675f'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        --ground: #e7eae4;
+        --sheet: #fafbf8;
+        --raise: #eef2eb;
+        --ink: #21261f;
+        --ink-2: #59614f;
+        --rule: #cbd2c5;
+        --rule-strong: #a9b3a2;
+        --felt: #2e5d45;
+        --on-felt: #f4f7f2;
+        --ink-3: #8a9384;
+        --felt-ink: #2e5d45;
+        --vermilion: #a83a25;
+        --vermilion-bg: #f6e7e2;
+        --warn-bg: #f3eddc;
+        --warn-fg: #6b5a21;
+        --warn-rule: #cfc193;
+        --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2359614f' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
 
-        --r-sm: 8px;
-        --r-md: 12px;
-        --r-lg: 16px;
-        --fs-xs: 0.7rem;
-        --fs-sm: 0.78rem;
-        --fs-md: 0.88rem;
-        --fs-lg: 1rem;
+        --r: 3px;
+        --fs-xs: 0.75rem;
+        --fs-sm: 0.8125rem;
+        --fs-md: 0.9375rem;
+        --fs-lg: 1.0625rem;
+
+        /* 端末に入っている和文書体を使う。webフォントを読まないので
+           電波が悪くても即座に描画され、字形の差し替わりも起きない。 */
+        --mincho: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", YuMincho,
+                  "Noto Serif JP", "Noto Serif CJK JP", "Songti SC", serif;
+        --gothic: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+                  "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", Meiryo, sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --ground: #12160f;
+          --sheet: #1b211a;
+          --raise: #212a20;
+          --ink: #e3e8de;
+          --ink-2: #96a08f;
+          --rule: #333c31;
+          --rule-strong: #4b564a;
+          --felt: #3a7255;
+          --on-felt: #f2f7f0;
+          --ink-3: #6b7568;
+          --felt-ink: #74b58f;
+          --vermilion: #e08066;
+          --vermilion-bg: #33201b;
+          --warn-bg: #262316;
+          --warn-fg: #d9c48a;
+          --warn-rule: #4c4426;
+          --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2396a08f' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+        }
       }
 
       [data-theme="dark"] {
-        --bg: #141814;
-        --bg-card: #242a24;
-        --green: #35754a;
-        --green-text: #6fbe86;
-        --green-light: #27332b;
-        --green-tint: rgba(111, 190, 134, 0.14);
-        --border: #454d45;
-        --text-main: #e6ede6;
-        --text-sub: #97a897;
-        --text-on-green: #ffffff;
-        --text-on-green-sub: rgba(255, 255, 255, 0.90);
-        --warn-bg: #2e2a1c;
-        --warn-fg: #e2c87e;
-        --warn-bd: #5a4c22;
-        --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2397a897'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        --ground: #12160f;
+        --sheet: #1b211a;
+        --raise: #212a20;
+        --ink: #e3e8de;
+        --ink-2: #96a08f;
+        --rule: #333c31;
+        --rule-strong: #4b564a;
+        --felt: #3a7255;
+        --on-felt: #f2f7f0;
+        --ink-3: #6b7568;
+        --felt-ink: #74b58f;
+        --vermilion: #e08066;
+        --vermilion-bg: #33201b;
+        --warn-bg: #262316;
+        --warn-fg: #d9c48a;
+        --warn-rule: #4c4426;
+        --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2396a08f' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
       }
 
       * { box-sizing: border-box; }
 
-      /* ダブルタップによる拡大だけを止める。ピンチズームは残るので
-         WCAG 1.4.4（テキストの拡大）は満たしたまま。 */
-      /* touch-action は継承されないので全要素に指定する。
-         manipulation はパン（スクロール）とピンチズームを許可する。 */
+      /* ダブルタップの拡大だけを止める。ピンチズームは残る。 */
       * { touch-action: manipulation; }
 
       body {
         margin: 0;
-        padding: 20px 14px 40px;
-        background: var(--bg);
-        color: var(--text-main);
-        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
-                     "Noto Sans JP", "Helvetica Neue", Meiryo, sans-serif;
-        font-size: 15px;
-        line-height: 1.6;
+        background: var(--ground);
+        color: var(--ink);
+        font-family: var(--gothic);
+        font-size: 16px;
+        line-height: 1.65;
         -webkit-font-smoothing: antialiased;
         -webkit-text-size-adjust: 100%;
       }
       body.modal-open { overflow: hidden; }
 
-      button, select { font-family: inherit; }
+      button, select { font-family: inherit; color: inherit; }
 
       :focus-visible {
-        outline: 2px solid var(--green-text);
-        outline-offset: 2px;
-        border-radius: var(--r-sm);
+        outline: 2px solid var(--felt);
+        outline-offset: 1px;
       }
 
       .sr-only {
@@ -107,229 +135,263 @@
           animation-iteration-count: 1 !important;
           transition-duration: 0.01ms !important;
         }
-        .icon-btn:hover svg { transform: none !important; }
       }
 
-      /* ---------- レイアウト ---------- */
+      /* ---------- 刷り物としての1枚 ---------- */
       .container {
-        max-width: 440px;
+        max-width: 460px;
         margin: 0 auto;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--r-lg);
-        overflow: hidden;
+        background: var(--sheet);
+        min-height: 100vh;
+      }
+
+      @media (min-width: 520px) {
+        body { padding: 32px 16px 48px; }
+        .container { min-height: 0; border: 1px solid var(--rule); }
       }
 
       .header-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        padding: 12px 16px;
-        border-bottom: 2px solid var(--green);
+        gap: 12px;
+        padding: 14px 18px 12px;
+        border-bottom: 2px solid var(--felt);
       }
-      .header-row h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
-      .header-actions { display: flex; gap: 6px; }
+
+      .masthead { display: flex; align-items: center; gap: 9px; }
+      .masthead h1 {
+        margin: 0;
+        font-family: var(--mincho);
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .tile-mark { display: block; flex: none; }
+
+      .header-actions { display: flex; gap: 4px; }
 
       .icon-btn {
         width: 40px; height: 40px;
         display: grid; place-items: center;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 50%;
-        color: var(--text-main);
-        font-size: 1rem;
+        background: transparent;
+        border: 1px solid var(--rule);
+        border-radius: var(--r);
+        color: var(--ink-2);
+        font-size: 0.95rem;
         cursor: pointer;
-        transition: background 0.15s, border-color 0.15s;
+        transition: border-color 0.12s, color 0.12s;
       }
-      .icon-btn:hover { background: var(--green-tint); border-color: var(--green); }
+      .icon-btn:hover { border-color: var(--rule-strong); color: var(--ink); }
       .icon-btn.small { width: 40px; height: 40px; }
 
-      #app { padding: 14px 16px 20px; display: grid; gap: 14px; }
+      /* ---------- 条件の行組み ---------- */
+      #app { padding: 0 18px 20px; }
 
-      .control-group { display: grid; gap: 8px; }
+      .control-group {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px 14px;
+        padding: 12px 0;
+        border-top: 1px solid var(--rule);
+      }
+      .control-group:first-child { border-top: 0; }
+      .control-group.stacked { align-items: start; }
+      .control-group.stacked .group-label { padding-top: 11px; }
 
       .group-label {
-        display: block;
-        font-size: var(--fs-xs);
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--green-text);
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        color: var(--ink-2);
+        line-height: 1.4;
       }
 
-      /* ---------- トグル ---------- */
+      .field { display: grid; gap: 6px; min-width: 0; }
+
+      /* ---------- 切り替え ---------- */
       .toggle-group {
         display: flex;
-        border: 1px solid var(--border);
-        border-radius: var(--r-sm);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
         overflow: hidden;
       }
       .toggle-btn {
         flex: 1;
-        min-height: 46px;
-        background: var(--bg-card);
+        min-height: 44px;
+        padding: 0 4px;
+        background: var(--sheet);
         border: 0;
-        border-right: 1px solid var(--border);
-        color: var(--text-sub);
+        border-right: 1px solid var(--rule-strong);
+        color: var(--ink-2);
         font-size: var(--fs-md);
         cursor: pointer;
-        transition: background 0.15s, color 0.15s;
+        transition: background 0.12s, color 0.12s;
       }
       .toggle-btn:last-child { border-right: 0; }
-      .toggle-btn.active {
-        background: var(--green);
-        color: var(--text-on-green);
-        font-weight: 700;
-      }
+      .toggle-btn.active { background: var(--felt); color: var(--on-felt); font-weight: 500; }
       .toggle-btn:disabled {
-        color: var(--text-sub);
-        background: var(--green-light);
+        background: repeating-linear-gradient(-45deg,
+          transparent 0 5px, var(--rule) 5px 6px);
+        color: var(--ink-2);
         cursor: not-allowed;
       }
 
-      /* ---------- セレクト ---------- */
+      /* ---------- 選択と補助ボタン ---------- */
       select {
         width: 100%;
-        min-height: 46px;
+        min-height: 44px;
         appearance: none;
         -webkit-appearance: none;
-        background-color: var(--bg-card);
+        background-color: var(--sheet);
         background-image: var(--arrow);
         background-repeat: no-repeat;
         background-position: right 12px center;
-        background-size: 16px;
-        border: 1px solid var(--border);
-        border-radius: var(--r-sm);
-        padding: 10px 38px 10px 12px;
+        background-size: 11px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
+        padding: 9px 34px 9px 11px;
         font-size: var(--fs-lg);
-        color: var(--text-main);
         cursor: pointer;
       }
       select:disabled {
-        color: var(--text-sub);
-        background-color: var(--green-light);
+        color: var(--ink-2);
+        background-color: var(--ground);
         cursor: not-allowed;
       }
 
       .helper-btn {
-        width: 100%;
-        min-height: 44px;
-        background: var(--bg-card);
-        border: 1px solid var(--green);
-        border-radius: var(--r-sm);
-        color: var(--green-text);
+        min-height: 40px;
+        background: transparent;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
+        color: var(--ink);
         font-size: var(--fs-sm);
-        font-weight: 700;
         cursor: pointer;
-        transition: background 0.15s;
+        transition: background 0.12s;
       }
-      .helper-btn:hover { background: var(--green-tint); }
+      .helper-btn:hover { background: var(--raise); }
       .helper-btn:disabled {
-        border-color: var(--border);
+        color: var(--ink-2);
         border-style: dashed;
-        color: var(--text-sub);
-        background: var(--green-light);
         cursor: not-allowed;
       }
+
+      /* ---------- 本場 ---------- */
+      .honba-control {
+        display: grid;
+        grid-template-columns: 48px 1fr 48px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
+        overflow: hidden;
+      }
+      .honba-btn {
+        min-height: 44px;
+        background: var(--sheet);
+        border: 0;
+        border-right: 1px solid var(--rule-strong);
+        color: var(--ink);
+        font-size: 1.1rem;
+        cursor: pointer;
+      }
+      .honba-btn:last-child { border-right: 0; border-left: 1px solid var(--rule-strong); }
+      .honba-btn:hover { background: var(--raise); }
+      .honba-btn:disabled { color: var(--ink-3); cursor: not-allowed; }
+      .honba-display {
+        display: grid; place-items: center;
+        font-size: var(--fs-md);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- 答え。ページで唯一持ち上げる場所 ---------- */
+      .result-area {
+        margin: 14px 0 0;
+        padding: 20px 16px 18px;
+        background: var(--raise);
+        border-top: 2px solid var(--felt);
+        border-radius: 0 0 var(--r) var(--r);
+        text-align: center;
+      }
+      .result-label {
+        font-size: var(--fs-xs);
+        color: var(--ink-2);
+        letter-spacing: 0.06em;
+      }
+      .result-score {
+        font-family: var(--mincho);
+        font-size: 3.1rem;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+        margin-top: 2px;
+      }
+      .score-unit { font-size: 1.2rem; font-weight: 600; margin-left: 2px; }
+      .score-rank {
+        display: block;
+        width: fit-content;
+        margin: 10px auto 0;
+        padding: 2px 12px;
+        background: var(--vermilion-bg);
+        border: 1px solid var(--vermilion);
+        border-radius: 2px;
+        color: var(--vermilion);
+        font-family: var(--gothic);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1.7;
+      }
+      .score-placeholder {
+        font-family: var(--gothic);
+        font-size: var(--fs-md);
+        font-weight: 400;
+        color: var(--ink-2);
+      }
+      .result-detail { margin-top: 10px; font-size: var(--fs-md); }
+      .result-line { font-size: var(--fs-sm); color: var(--ink-2); }
+      .tsumo-breakdown {
+        max-width: 210px;
+        margin: 0 auto;
+        border-top: 1px solid var(--rule);
+        padding-top: 8px;
+      }
+      .tsumo-row {
+        display: flex; justify-content: space-between;
+        font-variant-numeric: tabular-nums;
+      }
+      .tsumo-who { color: var(--ink-2); font-size: var(--fs-sm); }
+      .tsumo-amt { font-weight: 500; }
 
       /* ---------- 注意書き ---------- */
       .hint, .fu-warn {
         list-style: none;
         margin: 0;
-        padding: 8px 10px 8px 26px;
+        padding: 9px 11px 9px 24px;
         background: var(--warn-bg);
-        border-left: 3px solid var(--warn-bd);
-        border-radius: var(--r-sm);
+        border-left: 2px solid var(--warn-rule);
         color: var(--warn-fg);
         font-size: var(--fs-xs);
-        line-height: 1.55;
+        line-height: 1.6;
       }
       .hint li, .fu-warn li { position: relative; }
-      .hint li + li, .fu-warn li + li { margin-top: 4px; }
-      .hint li::before, .fu-warn li::before {
-        content: "・"; position: absolute; left: -1.1em;
-      }
-      .fu-warn { margin: 0 0 10px; }
+      .hint li + li, .fu-warn li + li { margin-top: 5px; }
+      .hint li::before, .fu-warn li::before { content: "・"; position: absolute; left: -1.05em; }
+      .fu-warn { margin: 0 0 12px; }
 
       .warn-action {
         display: inline-block;
-        margin-top: 6px;
+        margin-top: 7px;
         min-height: 36px;
         padding: 6px 12px;
-        background: var(--bg-card);
-        border: 1px solid var(--warn-bd);
-        border-radius: var(--r-sm);
+        background: transparent;
+        border: 1px solid var(--warn-rule);
+        border-radius: var(--r);
         color: var(--warn-fg);
         font-size: var(--fs-xs);
         font-weight: 700;
         cursor: pointer;
       }
-      .warn-action:hover { background: var(--warn-bg); }
-
-      /* ---------- 本場 ---------- */
-      .honba-control {
-        display: grid;
-        grid-template-columns: 52px 1fr 52px;
-        border: 1px solid var(--border);
-        border-radius: var(--r-sm);
-        overflow: hidden;
-      }
-      .honba-btn {
-        min-height: 46px;
-        background: var(--green-light);
-        border: 0;
-        color: var(--green-text);
-        font-size: 1.15rem;
-        cursor: pointer;
-      }
-      .honba-btn:hover { background: var(--green-tint); }
-      .honba-btn:disabled { color: var(--text-sub); cursor: not-allowed; }
-      .honba-display {
-        display: grid; place-items: center;
-        font-size: var(--fs-md); font-weight: 700;
-      }
-
-      /* ---------- 結果 ---------- */
-      .result-area {
-        background: var(--green);
-        color: var(--text-on-green);
-        border-radius: var(--r-md);
-        padding: 16px 14px;
-        text-align: center;
-      }
-      .result-label {
-        font-size: var(--fs-xs);
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: var(--text-on-green-sub);
-      }
-      .result-score {
-        font-size: 2.9rem;
-        font-weight: 700;
-        line-height: 1.15;
-        letter-spacing: -0.02em;
-        font-variant-numeric: tabular-nums;
-      }
-      .score-unit { font-size: 1.1rem; font-weight: 600; }
-      .score-rank {
-        display: block;
-        font-size: var(--fs-md);
-        font-weight: 600;
-        letter-spacing: 0;
-        color: var(--text-on-green-sub);
-      }
-      .score-placeholder { font-size: var(--fs-md); font-weight: 500; color: var(--text-on-green-sub); }
-      .result-detail { font-size: var(--fs-md); }
-      .result-line { color: var(--text-on-green-sub); font-size: var(--fs-sm); }
-      .tsumo-breakdown { max-width: 210px; margin: 4px auto 0; }
-      .tsumo-row {
-        display: flex; justify-content: space-between;
-        font-variant-numeric: tabular-nums;
-      }
-      .tsumo-who { color: var(--text-on-green-sub); }
-      .tsumo-amt { font-weight: 700; }
 
       /* ---------- モーダル ---------- */
       .modal-overlay {
@@ -337,7 +399,7 @@
         height: 100vh;
         height: 100dvh;
         height: var(--vvh, 100dvh);
-        background: rgba(10, 14, 10, 0.55);
+        background: rgba(14, 20, 14, 0.5);
         display: none;
         align-items: flex-end;
         justify-content: center;
@@ -348,222 +410,239 @@
         display: flex;
         flex-direction: column;
         width: 100%;
-        max-width: 440px;
+        max-width: 460px;
         max-height: 92vh;
         max-height: 92dvh;
-        background: var(--bg-card);
-        border-radius: var(--r-lg) var(--r-lg) 0 0;
-        animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        background: var(--sheet);
+        animation: rise 0.22s ease-out;
       }
       .modal-content:focus { outline: none; }
 
-      @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+      @keyframes rise { from { transform: translateY(18px); } to { transform: none; } }
 
       .modal-header {
         flex: none;
         position: sticky;
         top: 0;
         z-index: 1;
-        background: var(--bg-card);
-        border-radius: var(--r-lg) var(--r-lg) 0 0;
         display: flex; align-items: center; justify-content: space-between;
         gap: 10px;
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border);
+        padding: 13px 18px;
+        background: var(--sheet);
+        border-bottom: 2px solid var(--felt);
       }
-      .modal-header h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; }
-      .modal-header-actions { display: flex; gap: 6px; }
+      .modal-header h2 {
+        margin: 0;
+        font-family: var(--mincho);
+        font-size: var(--fs-lg);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+      .modal-header-actions { display: flex; gap: 4px; }
 
-      .modal-body { flex: 1; overflow-y: auto; padding: 12px 16px 16px; }
+      .modal-body { flex: 1; overflow-y: auto; padding: 14px 18px 18px; }
 
-      /* プレビューと反映ボタンは常に見えるようにフッターへ固定する */
       .modal-footer {
         flex: none;
-        padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-        border-top: 1px solid var(--border);
-        background: var(--bg-card);
+        padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+        border-top: 1px solid var(--rule);
+        background: var(--sheet);
       }
 
       .fu-state-bar {
-        display: flex; justify-content: space-between; gap: 8px;
-        background: var(--green-light);
-        border-radius: var(--r-sm);
-        padding: 8px 10px;
-        margin-bottom: 10px;
+        display: flex; justify-content: space-between; gap: 10px;
+        padding: 0 0 10px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--rule);
         font-size: var(--fs-sm);
-        font-weight: 700;
-        color: var(--text-sub);
+        color: var(--ink-2);
       }
+      .fu-state-bar span:last-child { color: var(--ink); }
 
       .fu-section-title {
-        margin: 14px 0 6px;
-        font-size: var(--fs-xs);
+        margin: 18px 0 8px;
+        font-family: var(--mincho);
+        font-size: var(--fs-sm);
         font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--green-text);
+        color: var(--ink);
+        letter-spacing: 0.06em;
       }
-      .fu-section-title:first-of-type { margin-top: 2px; }
+      .fu-section-title:first-of-type { margin-top: 0; }
 
       .fu-btn-grid { display: flex; gap: 6px; }
 
       .fu-btn {
         flex: 1;
         min-height: 52px;
-        background: var(--bg-card);
-        border: 1.5px solid var(--border);
-        border-radius: var(--r-sm);
-        padding: 8px 6px;
-        color: var(--text-main);
+        padding: 7px 5px;
+        background: var(--sheet);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
+        color: var(--ink);
         font-size: var(--fs-sm);
-        line-height: 1.35;
+        line-height: 1.4;
         cursor: pointer;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        transition: background 0.12s, color 0.12s;
       }
-      .fu-btn small { display: block; font-size: var(--fs-xs); color: var(--text-sub); }
-      .fu-btn.active { background: var(--green); border-color: var(--green); color: var(--text-on-green); font-weight: 700; }
-      .fu-btn.active small { color: var(--text-on-green-sub); }
+      .fu-btn small { display: block; font-size: var(--fs-xs); color: var(--ink-2); }
+      .fu-btn.active { background: var(--felt); border-color: var(--felt); color: var(--on-felt); font-weight: 500; }
+      .fu-btn.active small { color: var(--on-felt); opacity: 0.85; }
       .fu-btn:disabled {
-        background: var(--green-light);
-        border-style: dashed;
-        color: var(--text-sub);
+        background: repeating-linear-gradient(-45deg,
+          transparent 0 5px, var(--rule) 5px 6px);
+        color: var(--ink-2);
         cursor: not-allowed;
       }
-      .fu-btn:disabled small { color: var(--text-sub); }
+      .fu-btn:disabled small { color: var(--ink-2); }
 
-      .fu-note { margin: 0 0 8px; font-size: var(--fs-xs); color: var(--text-sub); }
+      .fu-note { margin: 0 0 9px; font-size: var(--fs-xs); color: var(--ink-2); }
 
       /* ---------- 面子 ---------- */
       .mentsu-grid {
         display: grid;
-        grid-template-columns: 60px 1fr 1fr;
-        gap: 6px;
+        grid-template-columns: 58px 1fr 1fr;
+        gap: 5px;
         align-items: stretch;
       }
       .mentsu-grid .mh {
         font-size: var(--fs-xs);
-        color: var(--text-sub);
+        color: var(--ink-2);
         text-align: center;
-        font-weight: 700;
-        line-height: 1.3;
+        line-height: 1.35;
+        padding-bottom: 2px;
       }
-      .mentsu-grid .mh-sub { font-weight: 400; }
+      .mentsu-grid .mh-sub { display: block; }
       .mentsu-grid .ml {
         display: grid; place-items: center;
-        background: var(--green-light);
-        border-radius: var(--r-sm);
+        border-right: 1px solid var(--rule);
         font-size: var(--fs-xs);
-        font-weight: 700;
-        color: var(--text-sub);
-        line-height: 1.3;
-        padding: 4px 2px;
+        font-weight: 500;
+        color: var(--ink);
+        line-height: 1.35;
+        padding: 4px 6px 4px 0;
       }
-      .mentsu-grid .ml span { font-weight: 400; }
+      .mentsu-grid .ml span { color: var(--ink-2); font-weight: 400; }
 
       .mentsu-cell {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: stretch;
-        border: 1px solid var(--border);
-        border-radius: var(--r-sm);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
         overflow: hidden;
       }
       .step-btn {
         min-height: 44px;
-        background: var(--green-light);
+        background: var(--sheet);
         border: 0;
-        color: var(--green-text);
+        color: var(--ink);
         font-size: 1.05rem;
         cursor: pointer;
       }
-      .step-btn:hover { background: var(--green-tint); }
-      .step-btn:disabled { color: var(--text-sub); cursor: not-allowed; }
+      .step-btn:hover { background: var(--raise); }
+      .step-btn:disabled { color: var(--ink-3); cursor: not-allowed; }
       .mentsu-count {
         display: grid; place-items: center;
-        min-width: 34px;
+        min-width: 32px;
+        border-left: 1px solid var(--rule);
+        border-right: 1px solid var(--rule);
         font-size: var(--fs-md);
-        font-weight: 700;
+        font-weight: 500;
         font-variant-numeric: tabular-nums;
-        line-height: 1.1;
+        line-height: 1.15;
       }
-      .mentsu-count small { display: block; font-size: 0.62rem; font-weight: 400; color: var(--text-sub); }
-      .mentsu-count.on { color: var(--green-text); }
+      .mentsu-count small { display: block; font-size: 0.625rem; font-weight: 400; color: var(--ink-2); }
+      .mentsu-count.on { background: var(--raise); color: var(--felt-ink); font-weight: 700; }
 
-      /* ---------- チップ（役） ---------- */
-      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      /* ---------- 役のチップ ---------- */
+      .chips { display: flex; flex-wrap: wrap; gap: 5px; }
       .chip {
         min-height: 40px;
         display: inline-flex; align-items: baseline; gap: 5px;
-        background: var(--bg-card);
-        border: 1.5px solid var(--border);
-        border-radius: var(--r-sm);
-        padding: 9px 12px;
-        color: var(--text-main);
+        padding: 8px 11px;
+        background: var(--sheet);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
+        color: var(--ink);
         font-size: var(--fs-sm);
         cursor: pointer;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        transition: background 0.12s, color 0.12s;
       }
-      .chip .chip-han { font-size: var(--fs-xs); color: var(--text-sub); }
-      .chip.active { background: var(--green); border-color: var(--green); color: var(--text-on-green); font-weight: 700; }
-      .chip.active .chip-han { color: var(--text-on-green-sub); }
+      .chip .chip-han { font-size: var(--fs-xs); color: var(--ink-2); }
+      .chip.active { background: var(--felt); border-color: var(--felt); color: var(--on-felt); font-weight: 500; }
+      .chip.active .chip-han { color: var(--on-felt); opacity: 0.85; }
       .chip:disabled {
-        background: var(--green-light);
-        border-style: dashed;
-        color: var(--text-sub);
+        background: repeating-linear-gradient(-45deg,
+          transparent 0 5px, var(--rule) 5px 6px);
+        color: var(--ink-2);
         cursor: not-allowed;
       }
-      .chip:disabled .chip-han { color: var(--text-sub); }
+      .chip:disabled .chip-han { color: var(--ink-2); }
 
-      /* ---------- カウンタ（役牌・ドラ） ---------- */
+      /* ---------- 役牌・ドラのカウンタ ---------- */
       .counter-row {
         display: grid;
         grid-template-columns: 1fr auto;
         align-items: center;
-        gap: 10px;
-        padding: 5px 0;
-        border-bottom: 1px solid var(--border);
+        gap: 12px;
+        padding: 7px 0;
+        border-top: 1px solid var(--rule);
       }
-      .counter-row:last-child { border-bottom: 0; }
+      .counter-row:first-child { border-top: 0; }
       .counter-row .cname { font-size: var(--fs-md); }
-      .counter-row .csub { display: block; font-size: var(--fs-xs); color: var(--text-sub); }
+      .counter-row .csub { display: block; font-size: var(--fs-xs); color: var(--ink-2); }
       .counter {
         display: grid;
-        grid-template-columns: 46px 44px 46px;
-        border: 1px solid var(--border);
-        border-radius: var(--r-sm);
+        grid-template-columns: 44px 42px 44px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--r);
         overflow: hidden;
       }
       .counter .cval {
         display: grid; place-items: center;
-        font-size: var(--fs-md); font-weight: 700;
+        border-left: 1px solid var(--rule);
+        border-right: 1px solid var(--rule);
+        font-size: var(--fs-md);
+        font-weight: 500;
         font-variant-numeric: tabular-nums;
       }
 
-      /* ---------- プレビュー・主ボタン ---------- */
+      /* ---------- 途中経過と確定ボタン ---------- */
       .calc-result-preview {
-        background: var(--green-light);
-        border-radius: var(--r-sm);
-        padding: 10px;
+        padding: 0 0 11px;
+        margin-bottom: 11px;
+        border-bottom: 1px solid var(--rule);
         text-align: center;
-        margin-bottom: 10px;
       }
-      .preview-main { display: block; font-size: 1.05rem; font-weight: 700; }
-      .preview-sub { display: block; margin-top: 2px; font-size: var(--fs-xs); color: var(--text-sub); line-height: 1.5; }
+      .preview-main {
+        display: block;
+        font-family: var(--mincho);
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .preview-sub {
+        display: block; margin-top: 3px;
+        font-size: var(--fs-xs); color: var(--ink-2); line-height: 1.55;
+      }
 
       .primary {
         width: 100%;
         min-height: 50px;
-        background: var(--green);
-        color: var(--text-on-green);
-        border: 0;
-        border-radius: var(--r-sm);
-        font-size: var(--fs-lg);
-        font-weight: 700;
+        background: var(--felt);
+        color: var(--on-felt);
+        border: 1px solid var(--felt);
+        border-radius: var(--r);
+        font-size: var(--fs-md);
+        font-weight: 500;
+        letter-spacing: 0.04em;
         cursor: pointer;
       }
       .primary:disabled {
-        background: var(--green-light);
-        color: var(--text-sub);
+        background: transparent;
+        border-color: var(--rule-strong);
+        border-style: dashed;
+        color: var(--ink-2);
         cursor: not-allowed;
       }
 
@@ -572,66 +651,72 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
       }
-      .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-sm); }
+      .table-controls .group-label { display: block; margin-bottom: 5px; }
+
+      .table-wrap { overflow-x: auto; border: 1px solid var(--rule-strong); }
       .score-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
       .score-table th, .score-table td {
         font-size: var(--fs-sm);
         text-align: right;
         white-space: nowrap;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--rule);
       }
-      .score-table th { padding: 9px 8px; }
+      .score-table th { padding: 8px 8px; font-weight: 500; }
       .score-table thead th {
-        background: var(--green-light);
-        color: var(--green-text);
+        background: var(--raise);
+        border-bottom: 1px solid var(--rule-strong);
+        color: var(--ink);
         font-size: var(--fs-xs);
-        font-weight: 700;
       }
-      .score-table .corner { text-align: left; }
-      .score-table tbody th { text-align: left; color: var(--text-sub); font-weight: 700; }
-      .score-table tbody th .rank-sub { display: block; font-size: var(--fs-xs); font-weight: 400; }
+      .score-table .corner { text-align: left; color: var(--ink-2); }
+      .score-table tbody th { text-align: left; color: var(--ink-2); }
+      .score-table tbody th .rank-sub { display: block; font-size: var(--fs-xs); }
       .score-table tbody tr:last-child th, .score-table tbody tr:last-child td { border-bottom: 0; }
       .score-table td { padding: 0; }
-      .score-table td.na { padding: 9px 8px; color: var(--text-sub); }
+      .score-table td.na { padding: 8px; color: var(--ink-2); }
       .score-table td.tier-val, .score-table td.na.tier-val { text-align: center; }
       .cell-btn {
         width: 100%;
-        min-height: 42px;
-        padding: 9px 8px;
+        min-height: 40px;
+        padding: 8px;
         background: none;
         border: 0;
-        color: inherit;
         font: inherit;
         text-align: right;
         cursor: pointer;
       }
       .score-table td.tier-val .cell-btn { text-align: center; }
-      .cell-btn:hover { background: var(--green-tint); }
-      .score-table td.cur { background: var(--green); color: var(--text-on-green); font-weight: 700; }
-      .score-table td.cur .cell-btn:hover { background: rgba(255, 255, 255, 0.12); }
+      .cell-btn:hover { background: var(--raise); }
+      .score-table td.cur { background: var(--felt); }
+      .score-table td.cur .cell-btn { color: var(--on-felt); font-weight: 700; }
       .score-table tr.tier-head th {
-        background: var(--green-light);
-        color: var(--green-text);
+        background: var(--raise);
+        border-top: 1px solid var(--rule-strong);
+        border-bottom: 1px solid var(--rule-strong);
+        color: var(--ink);
         font-size: var(--fs-xs);
-        font-weight: 700;
-        letter-spacing: 0.06em;
         text-align: left;
       }
       .tsumo-cell { font-size: var(--fs-xs); }
 
-      /* ---------- デスクトップ ---------- */
-      @media (min-width: 640px) {
+      @media (min-width: 520px) {
         .modal-overlay { align-items: center; padding: 24px; }
-        .modal-content { border-radius: var(--r-lg); max-height: 86vh; max-height: 86dvh; }
+        .modal-content { max-height: 86vh; max-height: 86dvh; border: 1px solid var(--rule); }
       }
     </style>
   </head>
   <body>
     <div class="container" id="app-root">
       <div class="header-row">
-        <h1>🀄 点数計算機</h1>
+        <div class="masthead">
+          <svg class="tile-mark" width="17" height="23" viewBox="0 0 17 23" aria-hidden="true">
+            <rect x="0.8" y="0.8" width="15.4" height="21.4" rx="2.4" fill="none" stroke="var(--felt)" stroke-width="1.6"/>
+            <rect x="5" y="6.5" width="7" height="10" rx="1" fill="var(--vermilion)"/>
+          </svg>
+          <h1>麻雀点数計算機</h1>
+        </div>
         <div class="header-actions">
           <button type="button" class="icon-btn" id="table-btn" onclick="openTableModal()" aria-label="点数早見表を開く">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
@@ -671,21 +756,25 @@
             </div>
         </div>
 
-        <div class="control-group">
-            <label class="group-label" for="han-select">翻数 (ハン)</label>
-            <select id="han-select" onchange="onHanChange()"></select>
-            <button type="button" class="helper-btn" id="han-assist-btn" onclick="openHanModal()">翻数計算アシスト</button>
+        <div class="control-group stacked">
+            <label class="group-label" for="han-select">翻数</label>
+            <div class="field">
+                <select id="han-select" onchange="onHanChange()"></select>
+                <button type="button" class="helper-btn" id="han-assist-btn" onclick="openHanModal()">役から数える</button>
+            </div>
+        </div>
+
+        <div class="control-group stacked">
+            <label class="group-label" for="fu-select">符数</label>
+            <div class="field">
+                <select id="fu-select" onchange="onFuChange()"></select>
+                <button type="button" class="helper-btn" id="fu-assist-btn" onclick="openFuModal()">手牌から数える</button>
+                <ul class="hint" id="fu-hint" role="status" hidden></ul>
+            </div>
         </div>
 
         <div class="control-group">
-            <label class="group-label" for="fu-select">符数 (フ)</label>
-            <select id="fu-select" onchange="onFuChange()"></select>
-            <button type="button" class="helper-btn" id="fu-assist-btn" onclick="openFuModal()">符数計算アシスト</button>
-            <ul class="hint" id="fu-hint" role="status" hidden></ul>
-        </div>
-
-        <div class="control-group">
-            <span class="group-label" id="lbl-honba">本場 (積み棒)</span>
+            <span class="group-label" id="lbl-honba">本場</span>
             <div class="honba-control" role="group" aria-labelledby="lbl-honba">
                 <button type="button" class="honba-btn" id="honba-minus" onclick="updateHonba(-1)" aria-label="本場を減らす">−</button>
                 <div class="honba-display" id="honba-display" role="status">0本場</div>
@@ -705,7 +794,7 @@
     <div class="modal-overlay" id="fu-modal" onclick="onOverlayClick(event)">
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="fu-modal-title" tabindex="-1">
             <div class="modal-header">
-                <h2 id="fu-modal-title">符数計算アシスト</h2>
+                <h2 id="fu-modal-title">手牌から符を数える</h2>
                 <div class="modal-header-actions">
                     <button type="button" class="icon-btn small" onclick="resetFuState()" aria-label="符数の入力をクリア">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -749,7 +838,7 @@
     <div class="modal-overlay" id="han-modal" onclick="onOverlayClick(event)">
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="han-modal-title" tabindex="-1">
             <div class="modal-header">
-                <h2 id="han-modal-title">翻数計算アシスト</h2>
+                <h2 id="han-modal-title">役から翻数を数える</h2>
                 <div class="modal-header-actions">
                     <button type="button" class="icon-btn small" onclick="resetHanState()" aria-label="翻数の入力をクリア">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -1380,8 +1469,8 @@
 
           const used = totalMentsuCount();
           const full = used >= 4;
-          let grid = '<div class="mh">種類</div><div class="mh">2〜8<br><span class="mh-sub">中張牌</span></div>' +
-                     '<div class="mh">1・9・字<br><span class="mh-sub">幺九牌</span></div>';
+          let grid = '<div class="mh"></div><div class="mh">2〜8<span class="mh-sub">中張牌</span></div>' +
+                     '<div class="mh">1・9・字<span class="mh-sub">幺九牌</span></div>';
           MENTSU_ROWS.forEach((row) => {
               grid += `<div class="ml">${row.label}<span>${row.sub}</span></div>`;
               row.cells.forEach((c) => {
