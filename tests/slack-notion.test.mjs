@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'slack-notion', 'src');
-const FILES = ['Config.gs', 'Text.gs', 'Slack.gs', 'Notion.gs', 'Cache.gs', 'Views.gs', 'Main.gs', 'Setup.gs'];
+const FILES = ['Config.gs', 'Text.gs', 'Slack.gs', 'Notion.gs', 'Cache.gs', 'Users.gs', 'Views.gs', 'Main.gs', 'Setup.gs'];
 
 // ---- テストランナー ----
 let pass = 0;
@@ -207,11 +207,87 @@ function viewSubmissionPayload(privateMetadata, databaseId, overrides = {}) {
   };
 }
 
+/** ⚡ メニューのグローバルショートカットのペイロード。 */
+function shortcutPayload(overrides = {}) {
+  return {
+    type: 'shortcut',
+    token: 'verify-me',
+    callback_id: 'manage_notion_databases',
+    trigger_id: 'trigger-settings',
+    team: { id: 'T1', domain: 'kitera' },
+    user: { id: 'U999' },
+    ...overrides
+  };
+}
+
+/** 設定モーダルの送信ペイロード。 */
+function settingsSubmissionPayload(databaseIds, overrides = {}) {
+  return {
+    type: 'view_submission',
+    token: 'verify-me',
+    team: { id: 'T1', domain: 'kitera' },
+    user: { id: 'U999' },
+    view: {
+      callback_id: 'save_notion_databases',
+      private_metadata: '',
+      state: {
+        values: {
+          databases: {
+            databases_select: {
+              type: 'multi_static_select',
+              selected_options: databaseIds.map((id) => ({ value: id }))
+            }
+          }
+        }
+      }
+    },
+    ...overrides
+  };
+}
+
+/** モーダル内のボタンが押されたときのペイロード。 */
+function blockActionsPayload(actionId, overrides = {}) {
+  return {
+    type: 'block_actions',
+    token: 'verify-me',
+    trigger_id: 'trigger-push',
+    team: { id: 'T1', domain: 'kitera' },
+    user: { id: 'U999' },
+    view: { id: 'V1', callback_id: '' },
+    actions: [{ type: 'button', action_id: actionId }],
+    ...overrides
+  };
+}
+
+/** 直近に views.open / views.push で開かれたモーダルを返す。 */
+function lastOpenedView(app) {
+  const opened = app.requests.filter((request) =>
+    request.url.endsWith('/api/views.open') || request.url.endsWith('/api/views.push'));
+  return opened.length ? opened[opened.length - 1].payload.view : null;
+}
+
 /** message_action を1回処理して、開かれたモーダルを返す。 */
 function openTaskModal(app, payload = messageActionPayload()) {
   app.call('doPost', postEvent(payload));
-  const opened = app.requests.filter((request) => request.url.endsWith('/api/views.open'));
-  return opened.length ? opened[opened.length - 1].payload.view : null;
+  return lastOpenedView(app);
+}
+
+/** グローバルショートカットを1回処理して、開かれたモーダルを返す。 */
+function openSettingsModal(app, payload = shortcutPayload()) {
+  app.call('doPost', postEvent(payload));
+  return lastOpenedView(app);
+}
+
+/** 設定画面を通してデータベースを登録する。 */
+function register(app, databaseIds, userId = 'U999') {
+  app.call('doPost', postEvent(shortcutPayload({ user: { id: userId } })));
+  return app.call('doPost', postEvent(settingsSubmissionPayload(databaseIds, { user: { id: userId } })));
+}
+
+/** タスク追加モーダルの選択肢のラベル。 */
+function optionLabels(view) {
+  const input = view.blocks.find((block) => block.type === 'input');
+  return input.element.options.map((option) => option.text.text);
 }
 
 // ---- 1. Slack のマークアップをテキストに直す ----
@@ -323,19 +399,35 @@ function openTaskModal(app, payload = messageActionPayload()) {
   check('block_id', modal.blocks.find((block) => block.type === 'input').block_id, 'database');
   check('action_id', select.action_id, 'database_select');
   check('callback_id', modal.callback_id, 'create_notion_task');
-  ok('件数超過を知らせる', modal.blocks.some((block) => block.type === 'context'));
+  ok('設定の変え方を案内する',
+    modal.blocks.some((block) => block.type === 'context' &&
+      block.elements[0].text.includes('Notion DBの設定')),
+    JSON.stringify(modal.blocks.filter((block) => block.type === 'context')));
+
+  const settings = app.call('buildSettingsModal_', many, []);
+  const settingsSelect = settings.blocks.find((block) => block.type === 'input').element;
+  check('設定画面の選択肢も100件まで', settingsSelect.options.length, 100);
+  ok('件数超過を知らせる',
+    settings.blocks.some((block) => block.type === 'context' &&
+      block.elements[0].text.includes('100件のみ')),
+    JSON.stringify(settings.blocks.filter((block) => block.type === 'context')));
+
+  const single = app.call('buildTaskModal_',
+    [{ id: 'db-1', title: 'ひとつだけ', titleProperty: 'Name', urlProperty: '' }], '{}', '本文');
+  const singleSelect = single.blocks.find((block) => block.type === 'input').element;
+  check('登録が1件なら最初から選ばれている', singleSelect.initial_option.value, 'db-1');
 }
 
 // ---- 7. […] からモーダルが開くまで ----
 {
   const app = createApp();
+  register(app, [DB_TASKS.id, DB_NOTES.id]);
   const output = app.call('doPost', postEvent(messageActionPayload()));
   check('Slackには空の200を返す', output.getContent(), '');
 
   const view = openTaskModal(app);
   ok('モーダルを開いた', !!view);
-  const options = view.blocks.find((block) => block.type === 'input').element.options;
-  check('候補は使えるデータベースだけ', options.map((option) => option.text.text), ['開発タスク', '議事録']);
+  check('候補は本人が登録したデータベース', optionLabels(view), ['開発タスク', '議事録']);
   ok('本文のプレビューを出す',
     view.blocks[0].text.text.includes('請求書の締め切りを確認する'), JSON.stringify(view.blocks[0]));
 
@@ -352,11 +444,21 @@ function openTaskModal(app, payload = messageActionPayload()) {
   openTaskModal(app);
   const after = app.urls().filter((url) => url.endsWith('/v1/search')).length;
   check('データベース一覧はキャッシュする', [before, after], [1, 1]);
+
+  check('登録順に並べる', optionLabels(openTaskModal(createAppRegistered([DB_NOTES.id, DB_TASKS.id]))),
+    ['議事録', '開発タスク']);
+}
+
+/** 登録済みのアプリを作る（並び順などの確認用）。 */
+function createAppRegistered(databaseIds, options) {
+  const app = createApp(options);
+  register(app, databaseIds);
+  return app;
 }
 
 // ---- 8. 本文が空のメッセージ ----
 {
-  const app = createApp();
+  const app = createAppRegistered([DB_TASKS.id]);
   const view = openTaskModal(app, messageActionPayload({
     message: { ts: '1717000000.123456', user: 'U111', text: '', files: [{ id: 'F1' }] }
   }));
@@ -393,7 +495,7 @@ function openTaskModal(app, payload = messageActionPayload()) {
 
 // ---- 10. モーダル送信 → Notion にページ作成 ----
 {
-  const app = createApp();
+  const app = createAppRegistered([DB_TASKS.id, DB_NOTES.id]);
   const view = openTaskModal(app);
   const metadata = view.private_metadata;
   const output = app.call('doPost', postEvent(viewSubmissionPayload(metadata, DB_TASKS.id)));
@@ -421,7 +523,7 @@ function openTaskModal(app, payload = messageActionPayload()) {
 // ---- 11. 送信時のエラー ----
 {
   // 選択なし
-  const app = createApp();
+  const app = createAppRegistered([DB_TASKS.id]);
   const empty = app.call('doPost', postEvent(viewSubmissionPayload('{}', '')));
   check('未選択はモーダル内にエラーを出す', JSON.parse(empty.getContent()).response_action, 'errors');
   check('エラーは選択欄に紐づける',
@@ -443,6 +545,7 @@ function openTaskModal(app, payload = messageActionPayload()) {
       return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ ok: true }) };
     }
   });
+  register(failing, [DB_TASKS.id]);
   const view = openTaskModal(failing);
   const result = failing.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_TASKS.id)));
   const body = JSON.parse(result.getContent());
@@ -461,6 +564,7 @@ function openTaskModal(app, payload = messageActionPayload()) {
       return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ ok: true }) };
     }
   });
+  register(throwing, [DB_TASKS.id]);
   const throwingView = openTaskModal(throwing);
   const thrown = throwing.call('doPost',
     postEvent(viewSubmissionPayload(throwingView.private_metadata, DB_TASKS.id)));
@@ -470,7 +574,7 @@ function openTaskModal(app, payload = messageActionPayload()) {
 
 // ---- 12. キャッシュが消えていても最低限動く ----
 {
-  const app = createApp();
+  const app = createAppRegistered([DB_TASKS.id]);
   const view = openTaskModal(app);
   app.cache.clear();
   app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_TASKS.id)));
@@ -479,20 +583,25 @@ function openTaskModal(app, payload = messageActionPayload()) {
     created[0].payload.properties['名前'].title[0].text.content, '請求書の締め切りを確認する');
 }
 
-// ---- 13. 許可リスト ----
+// ---- 13. 許可リスト（管理者が登録できるDBを絞る） ----
 {
   const app = createApp({ properties: { NOTION_DATABASE_ALLOWLIST: DB_NOTES.id.replace(/-/g, '') } });
-  const view = openTaskModal(app);
-  const options = view.blocks.find((block) => block.type === 'input').element.options;
-  check('許可したデータベースだけ出す', options.map((option) => option.text.text), ['議事録']);
+  const settings = openSettingsModal(app);
+  check('許可したデータベースだけ登録できる', optionLabels(settings), ['議事録']);
+
+  // 許可外のIDを直接送っても登録されない。
+  app.call('doPost', postEvent(settingsSubmissionPayload([DB_TASKS.id, DB_NOTES.id])));
+  check('許可外のIDは保存しない',
+    JSON.parse(app.properties.USER_DATABASES_U999).ids, [DB_NOTES.id]);
+  check('候補も許可されたものだけ', optionLabels(openTaskModal(app)), ['議事録']);
 }
 
-// ---- 14. 追加先が1件もない ----
+// ---- 14. Notion側に共有されたDBが1件もない ----
 {
   const app = createApp({ databases: [] });
-  const view = openTaskModal(app);
-  check('案内モーダルを出す', view.title.text, '追加先がありません');
-  ok('送信ボタンは出さない', view.submit === undefined, JSON.stringify(view.submit));
+  check('設定画面は理由を出す', openSettingsModal(app).title.text, '選べるDBがありません');
+  ok('送信ボタンは出さない', lastOpenedView(app).submit === undefined);
+  check('メッセージ側は登録を促す', openTaskModal(app).title.text, '追加先が未登録です');
 }
 
 // ---- 15. 設定が足りない ----
@@ -513,13 +622,118 @@ function openTaskModal(app, payload = messageActionPayload()) {
   check('url_verification に応答する', JSON.parse(challenge.getContent()).challenge, 'abc');
 }
 
-// ---- 17. 定数の突き合わせ（マニフェストとコード） ----
+// ---- 17. 設定画面（グローバルショートカット） ----
+{
+  const app = createApp();
+  const settings = openSettingsModal(app);
+  check('設定モーダルのcallback_id', settings.callback_id, 'save_notion_databases');
+  check('登録できるのは共有済みDBすべて', optionLabels(settings), ['開発タスク', '議事録']);
+  const select = settings.blocks.find((block) => block.type === 'input').element;
+  check('複数選択できる', select.type, 'multi_static_select');
+  ok('未登録なら初期選択なし', select.initial_options === undefined);
+  ok('すべて外して解除できるよう任意入力にする',
+    settings.blocks.find((block) => block.type === 'input').optional === true);
+  ok('個人設定であることを書く',
+    settings.blocks[0].text.text.includes('あなた個人'), settings.blocks[0].text.text);
+
+  // 保存する
+  const saved = app.call('doPost', postEvent(settingsSubmissionPayload([DB_NOTES.id])));
+  const body = JSON.parse(saved.getContent());
+  check('保存後は確認画面に差し替える', body.response_action, 'update');
+  ok('登録したDB名を出す', body.view.blocks[0].text.text.includes('議事録'),
+    body.view.blocks[0].text.text);
+  check('スクリプトプロパティに保存する',
+    JSON.parse(app.properties.USER_DATABASES_U999).ids, [DB_NOTES.id]);
+
+  // 開き直すと登録済みが選ばれている
+  const reopened = openSettingsModal(app);
+  const reopenedSelect = reopened.blocks.find((block) => block.type === 'input').element;
+  check('登録済みを初期選択にする',
+    reopenedSelect.initial_options.map((option) => option.text.text), ['議事録']);
+
+  // すべて外すと解除される
+  const cleared = app.call('doPost', postEvent(settingsSubmissionPayload([])));
+  ok('解除するとプロパティごと消す', app.properties.USER_DATABASES_U999 === undefined);
+  ok('解除したことを伝える',
+    JSON.parse(cleared.getContent()).view.blocks[0].text.text.includes('解除'));
+  check('解除後は候補が出ない', openTaskModal(app).title.text, '追加先が未登録です');
+}
+
+// ---- 18. 共有が外れたDBの扱い ----
+{
+  const app = createApp();
+  register(app, [DB_TASKS.id, DB_NOTES.id]);
+  // 開発タスクの共有が外された状態にする
+  const app2 = createApp({
+    properties: { USER_DATABASES_U999: app.properties.USER_DATABASES_U999 },
+    databases: [DB_NOTES]
+  });
+  check('候補から自然に落ちる', optionLabels(openTaskModal(app2)), ['議事録']);
+  const settings = openSettingsModal(app2);
+  const select = settings.blocks.find((block) => block.type === 'input').element;
+  check('設定画面の初期選択にも残さない',
+    select.initial_options.map((option) => option.text.text), ['議事録']);
+}
+
+// ---- 19. 使っていない人には候補が出ない ----
+{
+  const app = createApp();
+  register(app, [DB_TASKS.id], 'U111');
+
+  const view = openTaskModal(app, messageActionPayload({ user: { id: 'U222' } }));
+  check('未登録の人には案内だけ出す', view.title.text, '追加先が未登録です');
+  ok('ほかの人の登録は見せない',
+    JSON.stringify(view).indexOf('開発タスク') === -1, JSON.stringify(view));
+  ok('入力欄は出さない', !view.blocks.some((block) => block.type === 'input'));
+  ok('登録ボタンを置く',
+    view.blocks.some((block) => block.type === 'actions' &&
+      block.elements[0].action_id === 'open_settings'));
+  check('Notionには何も作らない', app.urls().filter((url) => url.endsWith('/v1/pages')).length, 0);
+
+  // 登録済みの人には出る
+  check('登録した本人には候補が出る',
+    optionLabels(openTaskModal(app, messageActionPayload({ user: { id: 'U111' } }))), ['開発タスク']);
+
+  // 案内モーダルのボタンから設定画面を重ねられる
+  app.call('doPost', postEvent(blockActionsPayload('open_settings', { user: { id: 'U222' } })));
+  const pushed = app.requests.filter((request) => request.url.endsWith('/api/views.push'));
+  check('ボタンで設定画面を重ねる', pushed.length, 1);
+  check('重ねるのは設定モーダル', pushed[0].payload.view.callback_id, 'save_notion_databases');
+
+  // 関係のないボタンでは何もしない
+  app.call('doPost', postEvent(blockActionsPayload('something_else')));
+  check('知らないボタンは無視する',
+    app.requests.filter((request) => request.url.endsWith('/api/views.push')).length, 1);
+}
+
+// ---- 20. 登録していないDBを直接指定しても作らせない ----
+{
+  const app = createApp();
+  register(app, [DB_NOTES.id], 'U111');
+  const view = openTaskModal(app, messageActionPayload({ user: { id: 'U111' } }));
+  const result = app.call('doPost', postEvent(viewSubmissionPayload(
+    view.private_metadata, DB_TASKS.id, { user: { id: 'U111' } })));
+  check('登録外のIDはエラーにする', JSON.parse(result.getContent()).response_action, 'errors');
+  check('ページは作らない', app.urls().filter((url) => url.endsWith('/v1/pages')).length, 0);
+
+  const other = app.call('doPost', postEvent(viewSubmissionPayload(
+    view.private_metadata, DB_NOTES.id, { user: { id: 'U222' } })));
+  check('別人が同じモーダルを送っても作らない',
+    JSON.parse(other.getContent()).response_action, 'errors');
+}
+
+// ---- 21. 定数の突き合わせ（マニフェストとコード） ----
 {
   const app = createApp();
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'slack-notion', 'slack-app-manifest.json'), 'utf8'));
-  check('ショートカットは message 型', manifest.features.shortcuts[0].type, 'message');
-  check('callback_id がコードと一致する',
-    manifest.features.shortcuts[0].callback_id, vm.runInContext('SHORTCUT_CALLBACK_ID', app.context));
+  const shortcuts = manifest.features.shortcuts;
+  const message = shortcuts.find((shortcut) => shortcut.type === 'message');
+  const global = shortcuts.find((shortcut) => shortcut.type === 'global');
+  ok('メッセージ用とグローバルの2つを定義する', !!message && !!global);
+  check('メッセージショートカットのcallback_id',
+    message.callback_id, vm.runInContext('SHORTCUT_CALLBACK_ID', app.context));
+  check('設定ショートカットのcallback_id',
+    global.callback_id, vm.runInContext('SETTINGS_SHORTCUT_CALLBACK_ID', app.context));
   ok('interactivity が有効', manifest.settings.interactivity.is_enabled === true);
   ok('users:read を要求する', manifest.oauth_config.scopes.bot.includes('users:read'));
 }

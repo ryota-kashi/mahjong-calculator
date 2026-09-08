@@ -64,6 +64,39 @@ function installDatabaseRefreshTrigger() {
 }
 
 /**
+ * 誰がどのデータベースを登録しているかを一覧する（管理用）。
+ */
+function listUserRegistrations() {
+  var config = readConfig_(PropertiesService.getScriptProperties().getProperties());
+  var users = listRegisteredUsers_(config);
+  if (!users.length) {
+    console.log('登録している利用者はいません。');
+    return;
+  }
+  var catalog = getDatabases_(config);
+  console.log(users.length + '人が登録しています。');
+  users.forEach(function (user) {
+    var names = filterDatabasesByIds_(catalog, user.ids).map(function (database) {
+      return database.title;
+    });
+    var unknown = user.ids.length - names.length;
+    console.log('  - ' + user.userId + ': ' + (names.join(' / ') || 'なし') +
+        (unknown > 0 ? '（共有が外れたDB ' + unknown + '件）' : '') +
+        ' [更新: ' + (user.updatedAt || '不明') + ']');
+  });
+}
+
+/**
+ * 指定した利用者の登録を消す（退職者の整理など）。
+ * @param {string} userId SlackのユーザーID（例: U0123ABCD）。
+ */
+function deleteUserRegistration(userId) {
+  if (!userId) throw new Error('SlackのユーザーIDを渡してください。');
+  PropertiesService.getScriptProperties().deleteProperty(userPropertyKey_(userId));
+  console.log(userId + ' の登録を削除しました。');
+}
+
+/**
  * キャッシュを捨てる。データベースを追加/共有した直後の確認に使う。
  */
 function clearCaches() {

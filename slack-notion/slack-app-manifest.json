@@ -15,12 +15,21 @@
         "type": "message",
         "callback_id": "add_to_notion",
         "description": "このメッセージをNotionのデータベースに追加する"
+      },
+      {
+        "name": "Notion DBの設定",
+        "type": "global",
+        "callback_id": "manage_notion_databases",
+        "description": "追加先にするNotionのデータベースを登録する"
       }
     ]
   },
   "oauth_config": {
     "scopes": {
-      "bot": ["commands", "users:read"]
+      "bot": [
+        "commands",
+        "users:read"
+      ]
     }
   },
   "settings": {

@@ -19,11 +19,21 @@ var DEFAULT_NOTION_VERSION = '2022-06-28';
 
 /** ショートカットの callback_id（Slackアプリのマニフェストと合わせる）。 */
 var SHORTCUT_CALLBACK_ID = 'add_to_notion';
+var SETTINGS_SHORTCUT_CALLBACK_ID = 'manage_notion_databases';
 
-/** モーダルの callback_id / block_id / action_id。 */
+/** タスク追加モーダルの callback_id / block_id / action_id。 */
 var MODAL_CALLBACK_ID = 'create_notion_task';
 var DATABASE_BLOCK_ID = 'database';
 var DATABASE_ACTION_ID = 'database_select';
+
+/** 設定モーダルの callback_id / block_id / action_id。 */
+var SETTINGS_MODAL_CALLBACK_ID = 'save_notion_databases';
+var SETTINGS_BLOCK_ID = 'databases';
+var SETTINGS_ACTION_ID = 'databases_select';
+var OPEN_SETTINGS_ACTION_ID = 'open_settings';
+
+/** 利用者ごとの登録内容を入れるスクリプトプロパティの接頭辞。 */
+var USER_PROPERTY_PREFIX = 'USER_DATABASES_';
 
 /** Notion のタイトルは長すぎると読みにくいので切り詰める。 */
 var TITLE_MAX_LENGTH = 100;
@@ -63,7 +73,10 @@ function readConfig_(props) {
     notionVersion: String(props[PROP_KEYS.notionVersion] || '').trim() || DEFAULT_NOTION_VERSION,
     databaseAllowlist: allowlist,
     urlPropertyName: String(props[PROP_KEYS.urlPropertyName] || '').trim(),
-    databaseCacheRaw: props[PROP_KEYS.databaseCache] || ''
+    databaseCacheRaw: props[PROP_KEYS.databaseCache] || '',
+    // 利用者ごとの登録内容を引くために、読み込んだプロパティをそのまま持っておく。
+    // doPost で1回だけ読むので、ここから引く限り追加の呼び出しは発生しない。
+    properties: props
   };
 }
 

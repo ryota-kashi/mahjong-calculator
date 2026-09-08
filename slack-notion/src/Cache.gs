@@ -93,19 +93,6 @@ function refreshDatabases_(config) {
 }
 
 /**
- * IDからデータベースを1件引く。キャッシュに無ければ作り直して再度探す。
- * @param {!Object} config
- * @param {string} databaseId
- * @return {?Object}
- */
-function findDatabase_(config, databaseId) {
-  var target = normalizeNotionId_(databaseId);
-  var found = pickDatabase_(getDatabases_(config), target);
-  if (found) return found;
-  return pickDatabase_(applyAllowlist_(config, refreshDatabases_(config).databases), target);
-}
-
-/**
  * @param {!Array<!Object>} databases
  * @param {string} normalizedId
  * @return {?Object}

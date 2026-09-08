@@ -71,7 +71,8 @@ GitHub Actions で push / pull request ごとに実行されます。
 ## 同梱ツール
 
 - [`slack-notion/`](slack-notion/) — Slackのメッセージの […] メニューから、選んだNotionの
-  データベースにタスクとして追加するSlackアプリ（Google Apps Script）。点数計算機とは
+  データベースにタスクとして追加するSlackアプリ（Google Apps Script）。追加先の候補は
+  利用者ごとに事前登録する方式で、登録していない人には候補が出ません。点数計算機とは
   独立したツールで、別のApps Scriptプロジェクトとしてデプロイします。
 
 ---

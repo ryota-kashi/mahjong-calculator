@@ -85,6 +85,17 @@ function openModal_(config, triggerId, view) {
 }
 
 /**
+ * 開いているモーダルの上に別のモーダルを重ねる。
+ * @param {!Object} config
+ * @param {string} triggerId
+ * @param {!Object} view
+ * @return {{ok: boolean, error: string, body: !Object}}
+ */
+function pushModal_(config, triggerId, view) {
+  return callSlackApi_(config, 'views.push', { trigger_id: triggerId, view: view });
+}
+
+/**
  * 投稿者の表示名を返す。users.info の結果はキャッシュする。
  * @param {!Object} config
  * @param {string} userId
