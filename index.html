@@ -4,18 +4,8 @@
     <base target="_top">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="light">
     <title>麻雀点数計算機</title>
-    <script>
-      // 保存済みテーマを描画前に反映して、初回ロードのちらつきを防ぐ
-      (function () {
-        var saved = null;
-        try { saved = localStorage.getItem('theme'); } catch (e) { saved = null; }
-        var dark = saved ? saved === 'dark'
-                         : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-      })();
-    </script>
     <style>
       /* ==========================================================
          「卓と牌」— 麻雀の実物から取った配色
@@ -25,9 +15,11 @@
            朱   : 中の赤。満貫以上の判にだけ使う
          ========================================================== */
       :root {
-        --ground: #e7eae4;
-        --sheet: #fafbf8;
-        --raise: #eef2eb;
+        color-scheme: light;
+
+        --ground: #eceeea;
+        --sheet: #ffffff;
+        --raise: #f2f4f0;
         --ink: #21261f;
         --ink-2: #59614f;
         --rule: #cbd2c5;
@@ -57,47 +49,7 @@
                   "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", Meiryo, sans-serif;
       }
 
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-          --ground: #12160f;
-          --sheet: #1b211a;
-          --raise: #212a20;
-          --ink: #e3e8de;
-          --ink-2: #96a08f;
-          --rule: #333c31;
-          --rule-strong: #4b564a;
-          --felt: #3a7255;
-          --on-felt: #f2f7f0;
-          --ink-3: #6b7568;
-          --felt-ink: #74b58f;
-          --vermilion: #e08066;
-          --vermilion-bg: #33201b;
-          --warn-bg: #262316;
-          --warn-fg: #d9c48a;
-          --warn-rule: #4c4426;
-          --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2396a08f' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
-        }
-      }
 
-      [data-theme="dark"] {
-        --ground: #12160f;
-        --sheet: #1b211a;
-        --raise: #212a20;
-        --ink: #e3e8de;
-        --ink-2: #96a08f;
-        --rule: #333c31;
-        --rule-strong: #4b564a;
-        --felt: #3a7255;
-        --on-felt: #f2f7f0;
-        --ink-3: #6b7568;
-        --felt-ink: #74b58f;
-        --vermilion: #e08066;
-        --vermilion-bg: #33201b;
-        --warn-bg: #262316;
-        --warn-fg: #d9c48a;
-        --warn-rule: #4c4426;
-        --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2396a08f' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
-      }
 
       * { box-sizing: border-box; }
 
@@ -721,10 +673,6 @@
           <button type="button" class="icon-btn" id="table-btn" onclick="openTableModal()" aria-label="点数早見表を開く">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
           </button>
-          <button type="button" class="icon-btn" id="theme-btn" onclick="toggleTheme()" aria-pressed="false" aria-label="ダークモードに切り替える">
-            <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </button>
           <button type="button" class="icon-btn" id="reset-btn" onclick="resetAll()" aria-label="すべてリセット">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
           </button>
@@ -918,22 +866,6 @@
          → render()（画面を描く）の順で回す。
          render 系の関数は状態を書き換えない。
          ========================================================== */
-
-      // ===================== テーマ =====================
-      function applyTheme(dark) {
-          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-          document.getElementById('icon-moon').style.display = dark ? 'none' : '';
-          document.getElementById('icon-sun').style.display = dark ? '' : 'none';
-          const btn = document.getElementById('theme-btn');
-          btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-          btn.setAttribute('aria-label', dark ? 'ライトモードに切り替える' : 'ダークモードに切り替える');
-      }
-
-      function toggleTheme() {
-          const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
-          applyTheme(dark);
-          try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) { /* 保存できない環境でも継続 */ }
-      }
 
       // iOS Safari の vh はアドレスバーを含む高さを指すため、モーダルが画面外に
       // はみ出す。実際に見えている高さを CSS 変数に入れて使う。
