@@ -5,7 +5,8 @@
   "description": "麻雀点数計算機",
   "type": "module",
   "scripts": {
-    "test": "node tests/score.test.mjs"
+    "test": "node tests/score.test.mjs",
+    "test:slack-notion": "node tests/slack-notion.test.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"

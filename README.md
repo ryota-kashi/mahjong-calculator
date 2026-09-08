@@ -51,7 +51,8 @@
 ```bash
 npm install
 npx playwright install chromium
-npm test
+npm test              # 点数計算の回帰テスト
+npm run test:slack-notion   # Slack→Notion連携のテスト（ブラウザ不要）
 ```
 
 `tests/score.test.mjs` は実際のブラウザで `index.html` を動かし、点数計算・符計算アシスト・
@@ -66,6 +67,12 @@ GitHub Actions で push / pull request ごとに実行されます。
 `render` 系の関数は状態を書き換えません。この一方向の流れによって、
 「符アシストを開いただけで本体の状態が変わる」「関数ごとに呼び出し順序が違って1周遅れる」
 といった不具合が構造的に起きないようにしています。
+
+## 同梱ツール
+
+- [`slack-notion/`](slack-notion/) — Slackのメッセージの […] メニューから、選んだNotionの
+  データベースにタスクとして追加するSlackアプリ（Google Apps Script）。点数計算機とは
+  独立したツールで、別のApps Scriptプロジェクトとしてデプロイします。
 
 ---
 

@@ -1,0 +1,35 @@
+{
+  "display_information": {
+    "name": "Notionタスク追加",
+    "description": "Slackのメッセージを選んだNotionデータベースにタスクとして追加します",
+    "background_color": "#2b2b2b"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Notionタスク追加",
+      "always_online": false
+    },
+    "shortcuts": [
+      {
+        "name": "Notionに追加",
+        "type": "message",
+        "callback_id": "add_to_notion",
+        "description": "このメッセージをNotionのデータベースに追加する"
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": ["commands", "users:read"]
+    }
+  },
+  "settings": {
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://script.google.com/macros/s/AKfycb.../exec?s=WEBHOOK_SECRET"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
