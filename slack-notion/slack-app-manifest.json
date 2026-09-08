@@ -21,6 +21,12 @@
         "type": "global",
         "callback_id": "manage_notion_databases",
         "description": "追加先にするNotionのデータベースを登録する"
+      },
+      {
+        "name": "自分のNotionタスク",
+        "type": "global",
+        "callback_id": "my_notion_tasks",
+        "description": "自分が担当の未完了タスクを開いて完了にする"
       }
     ]
   },

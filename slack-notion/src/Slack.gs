@@ -124,6 +124,17 @@ function pushModal_(config, triggerId, view) {
 }
 
 /**
+ * 開いているモーダルの中身を差し替える。trigger_id は要らない。
+ * @param {!Object} config
+ * @param {string} viewId
+ * @param {!Object} view
+ * @return {{ok: boolean, error: string, body: !Object}}
+ */
+function updateModal_(config, viewId, view) {
+  return callSlackApi_(config, 'views.update', { view_id: viewId, view: view });
+}
+
+/**
  * 投稿者の表示名を返す。users.info の結果はキャッシュする。
  * @param {!Object} config
  * @param {string} userId

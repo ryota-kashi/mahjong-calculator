@@ -98,7 +98,11 @@ function drainQueue_() {
       store.deleteProperty(jobs[i].key);
       if (!jobs[i].job) continue;
       try {
-        processJob_(config, jobs[i].job);
+        if (jobs[i].job.type === 'list') {
+          processListJob_(config, jobs[i].job);
+        } else {
+          processJob_(config, jobs[i].job);
+        }
       } catch (err) {
         logError_('タスクの作成に失敗', err);
         postToResponseUrl_(jobs[i].job.r,
@@ -188,7 +192,8 @@ function processJob_(config, job) {
     pageId: result.pageId,
     databaseId: database.id,
     title: task.title,
-    dueDate: task.dueDate
+    dueDate: task.dueDate,
+    canComplete: !!database.doneProperty
   }));
 }
 

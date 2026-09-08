@@ -151,9 +151,12 @@ function handleMessageAction_(config, payload) {
  * @return {!Object}
  */
 function handleGlobalShortcut_(config, payload) {
-  if (payload.callback_id !== SETTINGS_SHORTCUT_CALLBACK_ID) return textResponse_('');
   var triggerId = payload.trigger_id;
   if (!triggerId) return textResponse_('');
+  if (payload.callback_id !== SETTINGS_SHORTCUT_CALLBACK_ID &&
+      payload.callback_id !== TASKS_SHORTCUT_CALLBACK_ID) {
+    return textResponse_('');
+  }
 
   var missing = missingConfigKeys_(config);
   if (missing.length) {
@@ -166,8 +169,11 @@ function handleGlobalShortcut_(config, payload) {
     return textResponse_('');
   }
 
-  var view = settingsViewFor_(config, userId_(payload));
-  var opened = openModal_(config, triggerId, view);
+  if (payload.callback_id === TASKS_SHORTCUT_CALLBACK_ID) {
+    return handleTaskListShortcut_(config, payload);
+  }
+
+  var opened = openModal_(config, triggerId, settingsViewFor_(config, userId_(payload)));
   if (!opened.ok) logError_('views.open に失敗: ' + opened.error, null);
   return textResponse_('');
 }
@@ -180,7 +186,15 @@ function handleGlobalShortcut_(config, payload) {
  */
 function handleBlockActions_(config, payload) {
   var actions = payload.actions || [];
-  if (!payload.trigger_id) return textResponse_('');
+  // 完了ボタンはモーダルを開かないので trigger_id が無くても処理できる。
+  if (!payload.trigger_id) {
+    for (var n = 0; n < actions.length; n++) {
+      if ((actions[n] || {}).action_id === COMPLETE_ACTION_ID) {
+        return handleCompleteAction_(config, payload, actions[n]);
+      }
+    }
+    return textResponse_('');
+  }
 
   for (var i = 0; i < actions.length; i++) {
     var action = actions[i] || {};
@@ -192,6 +206,9 @@ function handleBlockActions_(config, payload) {
     }
     if (action.action_id === EDIT_ACTION_ID) {
       return openEditModal_(config, payload, action);
+    }
+    if (action.action_id === COMPLETE_ACTION_ID) {
+      return handleCompleteAction_(config, payload, action);
     }
   }
   return textResponse_('');

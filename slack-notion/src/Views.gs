@@ -212,24 +212,142 @@ function buildRegistrationNoticeModal_() {
  * @return {!Array<!Object>}
  */
 function buildCreatedBlocks_(text, target) {
+  var value = JSON.stringify({ p: target.pageId, d: target.databaseId });
+  var elements = [{
+    type: 'button',
+    action_id: EDIT_ACTION_ID,
+    text: { type: 'plain_text', text: '修正する', emoji: true },
+    value: JSON.stringify({
+      p: target.pageId,
+      d: target.databaseId,
+      t: truncate_(target.title || '', TITLE_MAX_LENGTH),
+      u: target.dueDate || ''
+    })
+  }];
+  if (target.canComplete) {
+    elements.push({
+      type: 'button',
+      action_id: COMPLETE_ACTION_ID,
+      text: { type: 'plain_text', text: '完了にする', emoji: true },
+      value: value
+    });
+  }
   return [
     { type: 'section', text: { type: 'mrkdwn', text: text } },
-    {
-      type: 'actions',
-      block_id: 'created_task',
-      elements: [{
-        type: 'button',
-        action_id: EDIT_ACTION_ID,
-        text: { type: 'plain_text', text: '修正する', emoji: true },
-        value: JSON.stringify({
-          p: target.pageId,
-          d: target.databaseId,
-          t: truncate_(target.title || '', TITLE_MAX_LENGTH),
-          u: target.dueDate || ''
-        })
-      }]
-    }
+    { type: 'actions', block_id: 'created_task', elements: elements }
   ];
+}
+
+/**
+ * 読み込み中に見せておくモーダル。Slackの3秒制限に間に合わせるため、
+ * まずこれを開いてから、裏で集めた結果を views.update で流し込む。
+ * @param {string} message
+ * @return {!Object}
+ */
+function buildLoadingModal_(message) {
+  return {
+    type: 'modal',
+    title: { type: 'plain_text', text: '自分のタスク', emoji: true },
+    close: { type: 'plain_text', text: '閉じる', emoji: true },
+    blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '⏳ ' + message } }]
+  };
+}
+
+/**
+ * 未完了タスクの一覧モーダル。
+ * @param {!Array<!Object>} tasks
+ * @param {!Object} summary {truncated, skipped}
+ * @return {!Object}
+ */
+function buildTaskListModal_(tasks, summary) {
+  var blocks = [];
+  if (!tasks.length) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: '🎉 自分が担当の未完了タスクはありません。' }
+    });
+  } else {
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: '未完了 ' + tasks.length + '件（期限の近い順）' }]
+    });
+    tasks.forEach(function (task) {
+      blocks.push(buildTaskRow_(task));
+    });
+  }
+
+  var notes = [];
+  if (summary && summary.truncated) {
+    notes.push('多いので' + MAX_TASK_LIST_ITEMS + '件までを表示しています。');
+  }
+  if (summary && summary.skipped && summary.skipped.length) {
+    notes.push('担当者列か完了列がないため除いたDB: ' + summary.skipped.join(' / '));
+  }
+  if (notes.length) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: notes.join('\n') }] });
+  }
+
+  return {
+    type: 'modal',
+    callback_id: 'notion_task_list',
+    title: { type: 'plain_text', text: '自分のタスク', emoji: true },
+    close: { type: 'plain_text', text: '閉じる', emoji: true },
+    blocks: blocks
+  };
+}
+
+/**
+ * 一覧の1行。右端に「完了」ボタンを置く。
+ * @param {!Object} task
+ * @return {!Object}
+ */
+function buildTaskRow_(task) {
+  var details = [];
+  if (task.dueDate) details.push('期限 ' + task.dueDate);
+  details.push(task.databaseTitle);
+
+  return {
+    type: 'section',
+    block_id: 'task_' + task.id,
+    text: {
+      type: 'mrkdwn',
+      text: (task.url ? '*<' + task.url + '|' + escapeMrkdwn_(task.title) + '>*' :
+          '*' + escapeMrkdwn_(task.title) + '*') +
+          '\n' + details.join(' ・ ')
+    },
+    accessory: {
+      type: 'button',
+      action_id: COMPLETE_ACTION_ID,
+      text: { type: 'plain_text', text: '完了', emoji: true },
+      value: JSON.stringify({ p: task.id, d: task.databaseId })
+    }
+  };
+}
+
+/**
+ * 完了にした行の見た目（ボタンを外して取り消し線にする）。
+ * @param {!Object} block 元の行。
+ * @return {!Object}
+ */
+function markRowCompleted_(block) {
+  var text = ((block.text || {}).text || '').split('\n')[0];
+  return {
+    type: 'section',
+    block_id: block.block_id,
+    text: { type: 'mrkdwn', text: '✅ ~' + text.replace(/\*/g, '') + '~' }
+  };
+}
+
+/**
+ * リンクラベルなどに入れる前に、Slackのmrkdwnで意味を持つ記号を無害にする。
+ * @param {string} text
+ * @return {string}
+ */
+function escapeMrkdwn_(text) {
+  return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
 }
 
 /**

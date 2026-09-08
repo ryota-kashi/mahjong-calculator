@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'slack-notion', 'src');
 const FILES = ['Config.gs', 'Text.gs', 'Slack.gs', 'Notion.gs', 'Gemini.gs', 'Cache.gs', 'Users.gs',
-  'Views.gs', 'Queue.gs', 'Main.gs', 'Setup.gs'];
+  'Views.gs', 'Queue.gs', 'Tasks.gs', 'Main.gs', 'Setup.gs'];
 
 // ---- テストランナー ----
 let pass = 0;
@@ -49,7 +49,18 @@ const DB_FULL = {
     'Name': { type: 'title' },
     '期限': { type: 'date' },
     '担当者': { type: 'people' },
-    '優先度': { type: 'select', select: { options: [{ name: '高' }, { name: '中' }, { name: '低' }] } }
+    '優先度': { type: 'select', select: { options: [{ name: '高' }, { name: '中' }, { name: '低' }] } },
+    'ステータス': {
+      type: 'status',
+      status: {
+        options: [{ id: 'o1', name: '未着手' }, { id: 'o2', name: '進行中' }, { id: 'o3', name: '完了' }],
+        groups: [
+          { id: 'g1', name: 'To-do', option_ids: ['o1'] },
+          { id: 'g2', name: 'In progress', option_ids: ['o2'] },
+          { id: 'g3', name: 'Complete', option_ids: ['o3'] }
+        ]
+      }
+    }
   }
 };
 const DB_NOTES = {
@@ -123,8 +134,11 @@ function createApp(options = {}) {
 
   const extraction = options.extraction || DEFAULT_EXTRACTION;
   const defaultHandler = (url, request) => {
-    if (url.endsWith('/api/views.open') || url.endsWith('/api/views.push')) {
-      return respond(200, { ok: true });
+    if (url.endsWith('/api/views.open')) {
+      return respond(200, { ok: true, view: { id: 'V-opened' } });
+    }
+    if (url.endsWith('/api/views.push') || url.endsWith('/api/views.update')) {
+      return respond(200, { ok: true, view: { id: 'V-opened' } });
     }
     if (url.endsWith('/api/users.info')) {
       const id = (request && request.payload && request.payload.user) || '';
@@ -132,6 +146,9 @@ function createApp(options = {}) {
       return respond(200, { ok: true, user: user });
     }
     if (url.endsWith('/v1/search')) return respond(200, { results: databases, has_more: false });
+    if (url.includes('/query')) {
+      return respond(200, { results: options.notionTasks || [] });
+    }
     if (url.includes('/v1/users')) {
       return respond(200, { results: options.notionUsers || NOTION_USERS, has_more: false });
     }
@@ -245,6 +262,7 @@ function createApp(options = {}) {
     notionPages: () => requests.filter((request) => request.url.endsWith('/v1/pages')),
     notifications: () => requests.filter((request) =>
       request.url.startsWith('https://hooks.slack.com/')),
+    updatedViews: () => requests.filter((request) => request.url.endsWith('/api/views.update')),
     call: (name, ...args) => vm.runInContext(name, context)(...args),
     urls: () => requests.map((request) => request.url)
   };
@@ -1357,18 +1375,204 @@ function createAppRegistered(databaseIds, options) {
     !lastOpenedView(notes).blocks.some((block) => block.block_id === 'task_due'));
 }
 
-// ---- 28. 定数の突き合わせ（マニフェストとコード） ----
+// ---- 28. 完了列の検出 ----
+{
+  const app = createApp();
+  const summarize = (database, options) => app.call('summarizeDatabase_', database, options || {});
+
+  const full = summarize(DB_FULL);
+  check('status列の「完了」グループから完了値を決める', full.doneProperty,
+    { name: 'ステータス', type: 'status', doneValue: '完了', openValues: ['未着手', '進行中'] });
+
+  const select = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' },
+    '状態': { type: 'select', select: { options: [{ name: '対応中' }, { name: 'Done' }] } }
+  } });
+  check('select列は選択肢名から完了を探す', select.doneProperty.doneValue, 'Done');
+
+  const checkbox = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' }, '完了': { type: 'checkbox' }
+  } });
+  check('チェックボックスも完了列として使う', checkbox.doneProperty,
+    { name: '完了', type: 'checkbox', doneValue: '', openValues: [] });
+
+  const none = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' },
+    'ステータス': { type: 'select', select: { options: [{ name: '対応中' }, { name: '保留' }] } }
+  } });
+  ok('完了に当たる選択肢がなければ完了列にしない', !none.doneProperty);
+
+  const explicit = summarize({ ...DB_FULL, properties: {
+    'Name': { type: 'title' },
+    '進行': { type: 'select', select: { options: [{ name: 'A' }, { name: 'B' }] } }
+  } }, { donePropertyName: '進行', doneValueName: 'B' });
+  check('NOTION_DONE_PROPERTY / VALUE の指定を優先', explicit.doneProperty.doneValue, 'B');
+
+  // 完了の書き込み方
+  check('status列はstatusとして書く',
+    app.call('buildNotDoneFilter_', full.doneProperty),
+    { property: 'ステータス', status: { does_not_equal: '完了' } });
+  check('チェックボックスは false で絞る',
+    app.call('buildNotDoneFilter_', checkbox.doneProperty),
+    { property: '完了', checkbox: { equals: false } });
+}
+
+// ---- 29. 自分のタスク一覧 ----
+{
+  const notionTasks = [
+    {
+      id: 'page-a', url: 'https://www.notion.so/a',
+      properties: { 'Name': { title: [{ plain_text: '請求書を送る' }] }, '期限': { date: { start: '2024-06-10' } } }
+    },
+    {
+      id: 'page-b', url: 'https://www.notion.so/b',
+      properties: { 'Name': { title: [{ plain_text: 'リリース準備' }] }, '期限': { date: { start: '2024-06-01' } } }
+    },
+    {
+      id: 'page-c', url: 'https://www.notion.so/c',
+      properties: { 'Name': { title: [{ plain_text: '期限なしの宿題' }] }, '期限': { date: null } }
+    }
+  ];
+  const app = createApp({ databases: [DB_FULL], notionTasks });
+  register(app, [DB_FULL.id], 'U111');
+
+  const output = app.call('doPost', postEvent(shortcutPayload({
+    callback_id: 'my_notion_tasks', user: { id: 'U111' }, trigger_id: 'trigger-list'
+  })));
+  check('3秒以内に空の200を返す', output.getContent(), '');
+  check('まず読み込み中を開く', lastOpenedView(app).blocks[0].text.text.includes('読み込んでいます'), true);
+  check('この時点ではNotionに問い合わせない',
+    app.urls().filter((url) => url.includes('/query')).length, 0);
+
+  app.runQueue();
+  const queries = app.requests.filter((request) => request.url.includes('/query'));
+  check('登録DBを引きにいく', queries.length, 1);
+  check('担当者で絞る', queries[0].payload.filter.and[0],
+    { property: '担当者', people: { contains: 'notion-me' } });
+  check('未完了で絞る', queries[0].payload.filter.and[1],
+    { property: 'ステータス', status: { does_not_equal: '完了' } });
+
+  const listView = app.updatedViews().slice(-1)[0].payload.view;
+  const rows = listView.blocks.filter((block) => block.block_id && block.block_id.startsWith('task_'));
+  check('期限の近い順に並べる（期限なしは最後）',
+    rows.map((row) => row.text.text.split('\n')[0]),
+    ['*<https://www.notion.so/b|リリース準備>*', '*<https://www.notion.so/a|請求書を送る>*',
+      '*<https://www.notion.so/c|期限なしの宿題>*']);
+  check('各行に完了ボタンを置く', rows[0].accessory.action_id, 'complete_task');
+  check('ボタンにページIDを持たせる', JSON.parse(rows[0].accessory.value).p, 'page-b');
+  ok('期限を添える', rows[0].text.text.includes('期限 2024-06-01'), rows[0].text.text);
+
+  // 完了ボタンを押す
+  app.call('doPost', postEvent(blockActionsPayload('complete_task', {
+    user: { id: 'U111' },
+    actions: [{ type: 'button', action_id: 'complete_task', value: rows[0].accessory.value }],
+    view: { id: 'V-opened', callback_id: 'notion_task_list', blocks: listView.blocks }
+  })));
+  const patched = app.requests.filter((request) => request.request.method === 'patch');
+  check('Notionを完了にする', patched.length, 1);
+  ok('対象ページを更新する', patched[0].url.endsWith('/v1/pages/page-b'), patched[0].url);
+  check('完了値を書き込む', patched[0].payload.properties['ステータス'], { status: { name: '完了' } });
+
+  const afterView = app.updatedViews().slice(-1)[0].payload.view;
+  const completedRow = afterView.blocks.find((block) => block.block_id === 'task_page-b');
+  ok('その行だけ完了表示にする', completedRow.text.text.startsWith('✅'), completedRow.text.text);
+  ok('完了した行のボタンは消す', completedRow.accessory === undefined);
+  ok('ほかの行はそのまま',
+    afterView.blocks.find((block) => block.block_id === 'task_page-a').accessory !== undefined);
+  check('一覧は取り直さない', app.requests.filter((request) => request.url.includes('/query')).length, 1);
+}
+
+// ---- 30. 一覧が出せないとき ----
+{
+  // 未登録
+  const unregistered = createApp({ databases: [DB_FULL] });
+  unregistered.call('doPost', postEvent(shortcutPayload({
+    callback_id: 'my_notion_tasks', user: { id: 'U404' }
+  })));
+  unregistered.runQueue();
+  ok('未登録なら登録を促す',
+    JSON.stringify(unregistered.updatedViews().slice(-1)[0].payload.view).includes('未登録'),
+    JSON.stringify(unregistered.updatedViews().slice(-1)[0].payload.view));
+
+  // Notion側に自分がいない
+  const unknown = createApp({ databases: [DB_FULL] });
+  register(unknown, [DB_FULL.id], 'U333');
+  unknown.call('doPost', postEvent(shortcutPayload({
+    callback_id: 'my_notion_tasks', user: { id: 'U333' }
+  })));
+  unknown.runQueue();
+  ok('メールが一致しなければ理由を出す',
+    JSON.stringify(unknown.updatedViews().slice(-1)[0].payload.view).includes('メールアドレス'));
+  check('Notionへの問い合わせもしない',
+    unknown.requests.filter((request) => request.url.includes('/query')).length, 0);
+
+  // 担当者列・完了列のないDBは対象外
+  const partial = createApp({ databases: [DB_TASKS] });
+  register(partial, [DB_TASKS.id], 'U111');
+  partial.call('doPost', postEvent(shortcutPayload({
+    callback_id: 'my_notion_tasks', user: { id: 'U111' }
+  })));
+  partial.runQueue();
+  const view = partial.updatedViews().slice(-1)[0].payload.view;
+  ok('タスクなしとして扱う', JSON.stringify(view).includes('未完了タスクはありません'));
+  ok('除いたDB名を伝える', JSON.stringify(view).includes('開発タスク'), JSON.stringify(view));
+  check('問い合わせは発生しない',
+    partial.requests.filter((request) => request.url.includes('/query')).length, 0);
+}
+
+// ---- 31. 通知からそのまま完了にする ----
+{
+  const app = createApp({ databases: [DB_FULL] });
+  register(app, [DB_FULL.id], 'U111');
+  const view = openTaskModal(app, messageActionPayload({ user: { id: 'U111' } }));
+  app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_FULL.id, {
+    user: { id: 'U111' }
+  })));
+  app.runQueue();
+
+  const buttons = app.notifications().slice(-1)[0].payload.blocks
+    .find((block) => block.type === 'actions').elements;
+  check('修正と完了の2つを出す', buttons.map((button) => button.action_id),
+    ['edit_task', 'complete_task']);
+
+  app.call('doPost', postEvent(blockActionsPayload('complete_task', {
+    user: { id: 'U111' },
+    actions: [{ type: 'button', action_id: 'complete_task', value: buttons[1].value }],
+    view: undefined,
+    response_url: 'https://hooks.slack.com/actions/T1/9/zzz'
+  })));
+  const patched = app.requests.filter((request) => request.request.method === 'patch');
+  check('完了にする', patched.length, 1);
+  ok('結果をSlackに返す',
+    app.notifications().slice(-1)[0].payload.text.includes('完了にしました'),
+    app.notifications().slice(-1)[0].payload.text);
+
+  // 完了列のないデータベースでは完了ボタンを出さない
+  const noDone = createAppRegistered([DB_TASKS.id]);
+  const noDoneView = openTaskModal(noDone);
+  noDone.call('doPost', postEvent(viewSubmissionPayload(noDoneView.private_metadata, DB_TASKS.id)));
+  noDone.runQueue();
+  check('完了列がなければ修正だけ',
+    noDone.notifications().slice(-1)[0].payload.blocks
+      .find((block) => block.type === 'actions').elements.map((button) => button.action_id),
+    ['edit_task']);
+}
+
+// ---- 32. 定数の突き合わせ（マニフェストとコード） ----
 {
   const app = createApp();
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'slack-notion', 'slack-app-manifest.json'), 'utf8'));
   const shortcuts = manifest.features.shortcuts;
   const message = shortcuts.find((shortcut) => shortcut.type === 'message');
-  const global = shortcuts.find((shortcut) => shortcut.type === 'global');
-  ok('メッセージ用とグローバルの2つを定義する', !!message && !!global);
+  ok('メッセージショートカットを定義する', !!message);
   check('メッセージショートカットのcallback_id',
     message.callback_id, vm.runInContext('SHORTCUT_CALLBACK_ID', app.context));
-  check('設定ショートカットのcallback_id',
-    global.callback_id, vm.runInContext('SETTINGS_SHORTCUT_CALLBACK_ID', app.context));
+  const settings = shortcuts.find((shortcut) =>
+    shortcut.callback_id === vm.runInContext('SETTINGS_SHORTCUT_CALLBACK_ID', app.context));
+  const tasks = shortcuts.find((shortcut) =>
+    shortcut.callback_id === vm.runInContext('TASKS_SHORTCUT_CALLBACK_ID', app.context));
+  ok('設定ショートカットがある', !!settings && settings.type === 'global');
+  ok('タスク一覧ショートカットがある', !!tasks && tasks.type === 'global');
   ok('interactivity が有効', manifest.settings.interactivity.is_enabled === true);
   const scopes = manifest.oauth_config.scopes.bot;
   ok('users:read を要求する', scopes.includes('users:read'));

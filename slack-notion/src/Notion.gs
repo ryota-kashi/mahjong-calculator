@@ -82,6 +82,12 @@ var ASSIGNEE_PROPERTY_PATTERN = /担当|assignee|owner|アサイン|responsible/
 /** 優先度とみなしてよい列名（select / status型）。 */
 var PRIORITY_PROPERTY_PATTERN = /優先|priority|重要度/i;
 
+/** 完了状態を持つとみなしてよい列名（select / status型）。 */
+var DONE_PROPERTY_PATTERN = /ステータス|状態|status|進捗|state/i;
+
+/** 完了を表す選択肢名 / チェックボックスの列名。 */
+var DONE_VALUE_PATTERN = /完了|done|終了|クローズ|closed|complete|済/i;
+
 /**
  * 検索結果のデータベースから、モーダルとページ作成に必要な情報だけ抜き出す。
  * @param {!Object} database Notionのdatabaseオブジェクト。
@@ -99,7 +105,8 @@ function summarizeDatabase_(database, options) {
     url: '',
     due: '',
     assignee: '',
-    priority: null
+    priority: null,
+    done: null
   };
   var guessed = {
     url: '',
@@ -107,7 +114,9 @@ function summarizeDatabase_(database, options) {
     weakDue: '',
     assignee: '',
     peopleProperties: [],
-    priority: null
+    priority: null,
+    done: null,
+    doneCheckbox: null
   };
 
   for (var name in properties) {
@@ -140,6 +149,22 @@ function summarizeDatabase_(database, options) {
       if (!guessed.priority && PRIORITY_PROPERTY_PATTERN.test(name) && choice.options.length) {
         guessed.priority = choice;
       }
+
+      var done = buildDoneProperty_(property, name, preferred.doneValueName);
+      if (done) {
+        if (preferred.donePropertyName === name) found.done = done;
+        // status型はNotionが「完了」グループを持つぶん当てにしやすいので優先する。
+        if (DONE_PROPERTY_PATTERN.test(name) &&
+            (!guessed.done || (type === 'status' && guessed.done.type !== 'status'))) {
+          guessed.done = done;
+        }
+      }
+    }
+
+    if (type === 'checkbox') {
+      var checkbox = { name: name, type: 'checkbox', doneValue: '', openValues: [] };
+      if (preferred.donePropertyName === name) found.done = checkbox;
+      if (!guessed.doneCheckbox && DONE_VALUE_PATTERN.test(name)) guessed.doneCheckbox = checkbox;
     }
   }
   if (!found.title) return null;
@@ -155,6 +180,9 @@ function summarizeDatabase_(database, options) {
         (guessed.peopleProperties.length === 1 ? guessed.peopleProperties[0] : '');
   }
   if (!found.priority && !preferred.priorityPropertyName) found.priority = guessed.priority;
+  if (!found.done && !preferred.donePropertyName) {
+    found.done = guessed.done || guessed.doneCheckbox;
+  }
 
   return {
     id: database.id,
@@ -164,7 +192,48 @@ function summarizeDatabase_(database, options) {
     dueProperty: found.due,
     assigneeProperty: found.assignee,
     priorityProperty: found.priority,
+    doneProperty: found.done,
     url: database.url || ''
+  };
+}
+
+/**
+ * select / status 列から「完了」を表す選択肢を見つける。
+ * status型はNotionが「完了」グループを持つので、まずそこを見る。
+ * @param {!Object} property Notionのプロパティ定義。
+ * @param {string} name 列名。
+ * @param {string} preferredValue NOTION_DONE_VALUE の設定値。
+ * @return {?Object} 見つからなければ null。
+ */
+function buildDoneProperty_(property, name, preferredValue) {
+  var container = property[property.type] || {};
+  var options = container.options || [];
+  if (!options.length) return null;
+  var names = options.map(function (option) { return String(option.name || ''); });
+
+  var doneValue = '';
+  if (preferredValue && names.indexOf(preferredValue) !== -1) {
+    doneValue = preferredValue;
+  } else {
+    var groups = container.groups || [];
+    for (var i = 0; i < groups.length && !doneValue; i++) {
+      if (!DONE_VALUE_PATTERN.test(String(groups[i].name || ''))) continue;
+      var ids = groups[i].option_ids || [];
+      for (var j = 0; j < options.length; j++) {
+        if (ids.indexOf(options[j].id) !== -1) { doneValue = String(options[j].name); break; }
+      }
+    }
+    for (var k = 0; k < names.length && !doneValue; k++) {
+      if (DONE_VALUE_PATTERN.test(names[k])) doneValue = names[k];
+    }
+  }
+  if (!doneValue) return null;
+
+  return {
+    name: name,
+    type: property.type,
+    doneValue: doneValue,
+    openValues: names.filter(function (option) { return option !== doneValue; })
   };
 }
 
@@ -296,6 +365,100 @@ function searchNotionUsers_(config) {
     if (!cursor) break;
   }
   return { ok: true, error: '', users: users };
+}
+
+/**
+ * 自分の未完了タスクをデータベースから引く。
+ * @param {!Object} config
+ * @param {!Object} database summarizeDatabase_ の戻り値。
+ * @param {string} notionUserId 担当者として絞り込むNotionユーザーID。
+ * @param {number} limit
+ * @return {{ok: boolean, error: string, tasks: !Array<!Object>}}
+ */
+function queryOpenTasks_(config, database, notionUserId, limit) {
+  if (!database.assigneeProperty || !database.doneProperty) {
+    return { ok: true, error: '', tasks: [] };
+  }
+
+  var payload = {
+    page_size: limit,
+    filter: {
+      and: [
+        { property: database.assigneeProperty, people: { contains: notionUserId } },
+        buildNotDoneFilter_(database.doneProperty)
+      ]
+    }
+  };
+  if (database.dueProperty) {
+    payload.sorts = [{ property: database.dueProperty, direction: 'ascending' }];
+  }
+
+  var result = callNotionApi_(config, 'post',
+      'databases/' + encodeURIComponent(database.id) + '/query', payload);
+  if (!result.ok) return { ok: false, error: result.error, tasks: [] };
+
+  var tasks = (result.body.results || []).map(function (page) {
+    return summarizeTaskPage_(page, database);
+  }).filter(function (task) { return !!task; });
+  return { ok: true, error: '', tasks: tasks };
+}
+
+/**
+ * 「完了ではない」の絞り込み条件を組み立てる（純粋関数）。
+ * @param {!Object} doneProperty
+ * @return {!Object}
+ */
+function buildNotDoneFilter_(doneProperty) {
+  if (doneProperty.type === 'checkbox') {
+    return { property: doneProperty.name, checkbox: { equals: false } };
+  }
+  var condition = { does_not_equal: doneProperty.doneValue };
+  var filter = { property: doneProperty.name };
+  filter[doneProperty.type] = condition;
+  return filter;
+}
+
+/**
+ * 一覧に出すぶんの情報だけページから抜き出す（純粋関数）。
+ * @param {!Object} page Notionのpageオブジェクト。
+ * @param {!Object} database
+ * @return {?Object}
+ */
+function summarizeTaskPage_(page, database) {
+  if (!page || !page.id) return null;
+  var properties = page.properties || {};
+  var titleProperty = properties[database.titleProperty] || {};
+  var dueProperty = database.dueProperty ? (properties[database.dueProperty] || {}) : {};
+  return {
+    id: page.id,
+    url: String(page.url || ''),
+    title: plainTextOf_(titleProperty.title) || '(無題)',
+    dueDate: String(((dueProperty.date || {}).start) || '').slice(0, 10),
+    databaseId: database.id,
+    databaseTitle: database.title
+  };
+}
+
+/**
+ * タスクを完了にする。
+ * @param {!Object} config
+ * @param {!Object} database
+ * @param {string} pageId
+ * @return {{ok: boolean, error: string, url: string}}
+ */
+function completeNotionTask_(config, database, pageId) {
+  var done = database.doneProperty;
+  if (!done) {
+    return { ok: false, error: 'このデータベースには完了にできる列がありません', url: '' };
+  }
+  var properties = {};
+  if (done.type === 'checkbox') {
+    properties[done.name] = { checkbox: true };
+  } else {
+    properties[done.name] = {};
+    properties[done.name][done.type] = { name: done.doneValue };
+  }
+  return updateNotionPage_(config, pageId, properties);
 }
 
 /**

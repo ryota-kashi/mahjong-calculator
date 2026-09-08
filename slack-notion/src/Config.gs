@@ -14,6 +14,8 @@ var PROP_KEYS = {
   duePropertyName: 'NOTION_DUE_PROPERTY',
   assigneePropertyName: 'NOTION_ASSIGNEE_PROPERTY',
   priorityPropertyName: 'NOTION_PRIORITY_PROPERTY',
+  donePropertyName: 'NOTION_DONE_PROPERTY',
+  doneValueName: 'NOTION_DONE_VALUE',
   notionUserCache: 'NOTION_USER_CACHE',
   geminiApiKey: 'GEMINI_API_KEY',
   geminiModel: 'GEMINI_MODEL',
@@ -36,6 +38,7 @@ var DEFAULT_NOTION_VERSION = '2022-06-28';
 /** ショートカットの callback_id（Slackアプリのマニフェストと合わせる）。 */
 var SHORTCUT_CALLBACK_ID = 'add_to_notion';
 var SETTINGS_SHORTCUT_CALLBACK_ID = 'manage_notion_databases';
+var TASKS_SHORTCUT_CALLBACK_ID = 'my_notion_tasks';
 
 /** タスク追加モーダルの callback_id / block_id / action_id。 */
 var MODAL_CALLBACK_ID = 'create_notion_task';
@@ -55,6 +58,13 @@ var EDIT_TITLE_BLOCK_ID = 'task_title';
 var EDIT_TITLE_ACTION_ID = 'task_title_input';
 var EDIT_DUE_BLOCK_ID = 'task_due';
 var EDIT_DUE_ACTION_ID = 'task_due_input';
+
+/** 完了操作。通知のボタンと一覧のボタンで共通。 */
+var COMPLETE_ACTION_ID = 'complete_task';
+
+/** 一覧に出すタスクの上限と、見に行くデータベースの上限。 */
+var MAX_TASK_LIST_ITEMS = 25;
+var MAX_TASK_LIST_DATABASES = 5;
 
 /** 利用者ごとの登録内容を入れるスクリプトプロパティの接頭辞。 */
 var USER_PROPERTY_PREFIX = 'USER_DATABASES_';
@@ -100,6 +110,8 @@ function readConfig_(props) {
     duePropertyName: String(props[PROP_KEYS.duePropertyName] || '').trim(),
     assigneePropertyName: String(props[PROP_KEYS.assigneePropertyName] || '').trim(),
     priorityPropertyName: String(props[PROP_KEYS.priorityPropertyName] || '').trim(),
+    donePropertyName: String(props[PROP_KEYS.donePropertyName] || '').trim(),
+    doneValueName: String(props[PROP_KEYS.doneValueName] || '').trim(),
     geminiApiKey: String(props[PROP_KEYS.geminiApiKey] || '').trim(),
     geminiModel: String(props[PROP_KEYS.geminiModel] || '').trim() || DEFAULT_GEMINI_MODEL,
     geminiThinkingBudget: readThinkingBudget_(props[PROP_KEYS.geminiThinkingBudget]),

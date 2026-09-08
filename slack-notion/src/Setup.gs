@@ -30,6 +30,8 @@ function showSetupStatus() {
   lines.push(PROP_KEYS.duePropertyName + ': ' + (config.duePropertyName || '未設定（自動判定）'));
   lines.push(PROP_KEYS.assigneePropertyName + ': ' + (config.assigneePropertyName || '未設定（自動判定）'));
   lines.push(PROP_KEYS.priorityPropertyName + ': ' + (config.priorityPropertyName || '未設定（自動判定）'));
+  lines.push(PROP_KEYS.donePropertyName + ': ' + (config.donePropertyName || '未設定（自動判定）'));
+  lines.push(PROP_KEYS.doneValueName + ': ' + (config.doneValueName || '未設定（自動判定）'));
 
   var missing = missingConfigKeys_(config);
   lines.push(missing.length ? '⚠ 未設定の必須項目: ' + missing.join(', ') : '✅ 必須項目はすべて設定済み');
@@ -70,6 +72,10 @@ function refreshDatabaseCache() {
     if (database.priorityProperty) {
       columns.push('優先度列: ' + database.priorityProperty.name +
           ' [' + database.priorityProperty.options.join(', ') + ']');
+    }
+    if (database.doneProperty) {
+      columns.push('完了列: ' + database.doneProperty.name +
+          (database.doneProperty.doneValue ? ' → ' + database.doneProperty.doneValue : ' (チェック)'));
     }
     console.log('  - ' + database.title + ' (' + database.id + ') ' + columns.join(' / '));
   });
