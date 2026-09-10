@@ -121,15 +121,15 @@ APIキーを設定しない場合、AIによる抽出は行われず、タスク
 
 ### 3. Apps Script側
 
-`clasp` を使う場合:
+付属のスクリプトを使う場合（プロジェクト作成とコード反映まで自動）:
 
 ```bash
-npm install -g @google/clasp
-clasp login
-cd slack-notion
-clasp create --type standalone --title "Slack Notion Task" --rootDir ./src
-clasp push
+bash slack-notion/setup.sh
 ```
+
+事前に https://script.google.com/home/usersettings で
+「Google Apps Script API」をオンにしておいてください。
+Googleへのログインは途中でブラウザが開きます。
 
 手で作る場合（claspを使わない場合）:
 
