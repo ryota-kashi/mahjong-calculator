@@ -7,10 +7,11 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
+import { SOURCE_FILES, BUNDLE_PATH, buildBundle } from '../slack-notion/build-bundle.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'slack-notion', 'src');
-const FILES = ['Config.gs', 'Text.gs', 'Slack.gs', 'Notion.gs', 'Gemini.gs', 'Cache.gs', 'Users.gs',
-  'Views.gs', 'Queue.gs', 'Tasks.gs', 'Main.gs', 'Setup.gs'];
+const FILES = SOURCE_FILES;
 
 // ---- テストランナー ----
 let pass = 0;
@@ -243,9 +244,15 @@ function createApp(options = {}) {
   };
 
   const context = vm.createContext(sandbox);
-  for (const file of FILES) {
-    const code = fs.readFileSync(path.join(SRC, file), 'utf8');
-    new vm.Script(code, { filename: file }).runInContext(context);
+  if (options.useBundle) {
+    // 手で貼り付ける用のまとめファイルでも同じように動くことを確かめる。
+    new vm.Script(fs.readFileSync(BUNDLE_PATH, 'utf8'), { filename: 'Code.gs' })
+        .runInContext(context);
+  } else {
+    for (const file of FILES) {
+      const code = fs.readFileSync(path.join(SRC, file), 'utf8');
+      new vm.Script(code, { filename: file }).runInContext(context);
+    }
   }
 
   return {
@@ -1558,7 +1565,22 @@ function createAppRegistered(databaseIds, options) {
     ['edit_task']);
 }
 
-// ---- 32. 定数の突き合わせ（マニフェストとコード） ----
+// ---- 32. 手貼り用のまとめファイル ----
+{
+  ok('dist/Code.gs が src と一致している（`npm run build:slack-notion` を忘れていないか）',
+    fs.readFileSync(BUNDLE_PATH, 'utf8') === buildBundle());
+
+  // まとめファイルだけでも一通り動く
+  const app = createApp({ useBundle: true });
+  register(app, [DB_TASKS.id]);
+  const view = openTaskModal(app);
+  check('まとめファイルでもモーダルが開く', optionLabels(view), ['開発タスク']);
+  app.call('doPost', postEvent(viewSubmissionPayload(view.private_metadata, DB_TASKS.id)));
+  app.runQueue();
+  check('まとめファイルでもページが作られる', app.notionPages().length, 1);
+}
+
+// ---- 33. 定数の突き合わせ（マニフェストとコード） ----
 {
   const app = createApp();
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'slack-notion', 'slack-app-manifest.json'), 'utf8'));

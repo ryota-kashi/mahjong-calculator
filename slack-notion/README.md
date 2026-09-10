@@ -131,10 +131,16 @@ clasp create --type standalone --title "Slack Notion Task" --rootDir ./src
 clasp push
 ```
 
-手動で作る場合は https://script.google.com で新規プロジェクトを作り、`src/` の
-`.gs` ファイルの中身をそれぞれ同じ名前のファイルとして貼り付けてください
-（`appsscript.json` はプロジェクト設定の「appsscript.json マニフェスト ファイルを
-エディタで表示する」を有効にすると編集できます）。
+手で作る場合（claspを使わない場合）:
+
+1. https://script.google.com で新規プロジェクトを作る
+2. [`dist/Code.gs`](dist/Code.gs) の中身を**まるごと**「コード.gs」に貼り付ける
+   （`src/*.gs` を1ファイルにまとめたものです。ファイルを分ける必要はありません）
+3. プロジェクトの設定でタイムゾーンが「日本標準時」になっているか確認する
+   （投稿日時の表示と「明日まで」の解決に使います）
+
+`dist/Code.gs` は `src/` から自動生成しています。`src/` を直したら
+`npm run build:slack-notion` で作り直してください（CIで一致を確認しています）。
 
 ### 4. スクリプトプロパティ
 
